@@ -77,96 +77,56 @@ const WC_MATCHES = [
 ];
 
 // ================================================
-// SLUTSPELSMATCHER (id 101+)
+// STORAGE
 // ================================================
-const KNOCKOUT_ROUNDS = [
-  { round: "R32", name: "Sextondelsfinal", matches: [
-    { id: 101 }, { id: 102 }, { id: 103 }, { id: 104 },
-    { id: 105 }, { id: 106 }, { id: 107 }, { id: 108 },
-    { id: 109 }, { id: 110 }, { id: 111 }, { id: 112 },
-    { id: 113 }, { id: 114 }, { id: 115 }, { id: 116 },
-  ]},
-  { round: "R16", name: "Åttondelsfinaler", matches: [
-    { id: 201 }, { id: 202 }, { id: 203 }, { id: 204 },
-    { id: 205 }, { id: 206 }, { id: 207 }, { id: 208 },
-  ]},
-  { round: "QF", name: "Kvartsfinaler", matches: [
-    { id: 301 }, { id: 302 }, { id: 303 }, { id: 304 },
-  ]},
-  { round: "SF", name: "Semifinaler", matches: [
-    { id: 401 }, { id: 402 },
-  ]},
-  { round: "F", name: "Final", matches: [
-    { id: 501 },
-  ]},
-];
-
-// ================================================
-// HJÄLPFUNKTIONER – TIPS
-// ================================================
-function getSavedTips() {
-  return JSON.parse(localStorage.getItem("vm2026_tips") || "{}");
+function getSavedTips() { return JSON.parse(localStorage.getItem("vm2026_tips") || "{}"); }
+function saveTip(id, hg, ag) {
+  const t = getSavedTips();
+  t[id] = { homeGoals: hg, awayGoals: ag };
+  localStorage.setItem("vm2026_tips", JSON.stringify(t));
 }
-function saveTip(matchId, homeGoals, awayGoals) {
-  const tips = getSavedTips();
-  tips[matchId] = { homeGoals, awayGoals };
-  localStorage.setItem("vm2026_tips", JSON.stringify(tips));
-}
-function getKnockoutPicks() {
-  return JSON.parse(localStorage.getItem("vm2026_knockout") || "{}");
-}
+function getKnockoutPicks() { return JSON.parse(localStorage.getItem("vm2026_knockout") || "{}"); }
 function saveKnockoutPick(matchId, winner) {
-  const picks = getKnockoutPicks();
-  picks[matchId] = winner;
-  // Rensa alla picks som beror på denna match
-  clearDownstreamPicks(matchId, picks);
-  localStorage.setItem("vm2026_knockout", JSON.stringify(picks));
+  const p = getKnockoutPicks();
+  p[matchId] = winner;
+  clearDownstreamPicks(matchId, p);
+  localStorage.setItem("vm2026_knockout", JSON.stringify(p));
 }
 function clearDownstreamPicks(matchId, picks) {
-  // Om en pick ändras, rensa nästa rundas match som beror på den
   const id = parseInt(matchId);
-  let nextId = null;
-  if (id >= 101 && id <= 116) nextId = 200 + Math.ceil((id - 100) / 2);
-  else if (id >= 201 && id <= 208) nextId = 300 + Math.ceil((id - 200) / 2);
-  else if (id >= 301 && id <= 304) nextId = 400 + Math.ceil((id - 300) / 2);
-  else if (id >= 401 && id <= 402) nextId = 501;
-  if (nextId && picks[nextId]) {
-    delete picks[nextId];
-    clearDownstreamPicks(nextId, picks);
-  }
+  let next = null;
+  if (id >= 101 && id <= 116) next = 200 + Math.ceil((id - 100) / 2);
+  else if (id >= 201 && id <= 208) next = 300 + Math.ceil((id - 200) / 2);
+  else if (id >= 301 && id <= 304) next = 400 + Math.ceil((id - 300) / 2);
+  else if (id >= 401 && id <= 402) next = 501;
+  if (next && picks[next]) { delete picks[next]; clearDownstreamPicks(next, picks); }
 }
 
 // ================================================
-// GRUPPTABELL
+// GROUP LOGIC
 // ================================================
 function groupMatchesByGroup(matches) {
-  const groups = {};
-  for (const m of matches) {
-    if (!groups[m.group]) groups[m.group] = [];
-    groups[m.group].push(m);
-  }
-  return groups;
+  return matches.reduce((acc, m) => {
+    if (!acc[m.group]) acc[m.group] = [];
+    acc[m.group].push(m);
+    return acc;
+  }, {});
 }
 
 function calcGroupStandings(groupMatches, tips) {
   const teams = {};
   for (const m of groupMatches) {
-    if (!teams[m.homeTeam]) teams[m.homeTeam] = { name: m.homeTeam, p:0, w:0, d:0, l:0, gf:0, ga:0, pts:0 };
-    if (!teams[m.awayTeam]) teams[m.awayTeam] = { name: m.awayTeam, p:0, w:0, d:0, l:0, gf:0, ga:0, pts:0 };
+    if (!teams[m.homeTeam]) teams[m.homeTeam] = { name: m.homeTeam, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 };
+    if (!teams[m.awayTeam]) teams[m.awayTeam] = { name: m.awayTeam, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 };
     const tip = tips[m.id];
     if (!tip) continue;
     const hg = tip.homeGoals, ag = tip.awayGoals;
     teams[m.homeTeam].p++; teams[m.awayTeam].p++;
     teams[m.homeTeam].gf += hg; teams[m.homeTeam].ga += ag;
     teams[m.awayTeam].gf += ag; teams[m.awayTeam].ga += hg;
-    if (hg > ag) {
-      teams[m.homeTeam].w++; teams[m.homeTeam].pts += 3; teams[m.awayTeam].l++;
-    } else if (hg < ag) {
-      teams[m.awayTeam].w++; teams[m.awayTeam].pts += 3; teams[m.homeTeam].l++;
-    } else {
-      teams[m.homeTeam].d++; teams[m.homeTeam].pts++;
-      teams[m.awayTeam].d++; teams[m.awayTeam].pts++;
-    }
+    if (hg > ag) { teams[m.homeTeam].w++; teams[m.homeTeam].pts += 3; teams[m.awayTeam].l++; }
+    else if (hg < ag) { teams[m.awayTeam].w++; teams[m.awayTeam].pts += 3; teams[m.homeTeam].l++; }
+    else { teams[m.homeTeam].d++; teams[m.homeTeam].pts++; teams[m.awayTeam].d++; teams[m.awayTeam].pts++; }
   }
   return Object.values(teams).sort((a,b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
@@ -181,356 +141,653 @@ function getBestThirds(allGroups, tips) {
     const s = calcGroupStandings(matches, tips);
     if (s.length >= 3) thirds.push({ ...s[2], group: g });
   }
-  return thirds.sort((a,b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    if ((b.gf-b.ga) !== (a.gf-a.ga)) return (b.gf-b.ga)-(a.gf-a.ga);
-    return b.gf - a.gf;
-  }).slice(0, 8);
+  return thirds.sort((a,b) => b.pts - a.pts || (b.gf-b.ga) - (a.gf-a.ga) || b.gf - a.gf).slice(0,8);
 }
 
 // ================================================
-// BERÄKNA SEXTONDELSFINAL-PAR
+// KNOCKOUT
 // ================================================
-function calcR32Matchups(groupStandings, bestThirds) {
-  const w = (g) => groupStandings["GROUP_"+g]?.[0]?.name || "Vinnare "+g;
-  const r = (g) => groupStandings["GROUP_"+g]?.[1]?.name || "Tvåa "+g;
-  const t = (i) => bestThirds[i]?.name || "Bästa trea #"+(i+1);
-
+function calcR32Matchups(gs, thirds) {
+  const w = g => gs["GROUP_"+g]?.[0]?.name || "Vinnare "+g;
+  const r = g => gs["GROUP_"+g]?.[1]?.name || "Tvåa "+g;
+  const t = i => thirds[i]?.name || "Bästa trea #"+(i+1);
   return [
-    { id: 101, home: w("A"), away: r("B") },
-    { id: 102, home: w("C"), away: r("F") },
-    { id: 103, home: w("E"), away: t(0) },
-    { id: 104, home: w("F"), away: r("C") },
-    { id: 105, home: w("G"), away: t(1) },
-    { id: 106, home: w("D"), away: t(2) },
-    { id: 107, home: w("I"), away: t(3) },
-    { id: 108, home: w("L"), away: t(4) },
-    { id: 109, home: r("A"), away: r("D") },
-    { id: 110, home: w("B"), away: t(5) },
-    { id: 111, home: w("H"), away: r("J") },
-    { id: 112, home: w("J"), away: r("H") },
-    { id: 113, home: w("K"), away: t(6) },
-    { id: 114, home: r("K"), away: r("L") },
-    { id: 115, home: r("G"), away: t(7) },
-    { id: 116, home: w("B"), away: r("E") },
+    { id:101, home:w("A"), away:r("B") }, { id:102, home:w("C"), away:r("F") },
+    { id:103, home:w("E"), away:t(0) },   { id:104, home:w("F"), away:r("C") },
+    { id:105, home:w("G"), away:t(1) },   { id:106, home:w("D"), away:t(2) },
+    { id:107, home:w("I"), away:t(3) },   { id:108, home:w("L"), away:t(4) },
+    { id:109, home:r("A"), away:r("D") }, { id:110, home:w("B"), away:t(5) },
+    { id:111, home:w("H"), away:r("J") }, { id:112, home:w("J"), away:r("H") },
+    { id:113, home:w("K"), away:t(6) },   { id:114, home:r("K"), away:r("L") },
+    { id:115, home:r("G"), away:t(7) },   { id:116, home:w("B"), away:r("E") },
   ];
 }
 
-// ================================================
-// BERÄKNA EFTERFÖLJANDE RUNDOR FRÅN PICKS
-// ================================================
-function calcKnockoutMatchups(r32Matchups, picks) {
-  // R16 – vinnare av R32 möts parvis
-  const r16 = [];
-  for (let i = 0; i < 8; i++) {
-    const m1 = r32Matchups[i*2];
-    const m2 = r32Matchups[i*2+1];
-    r16.push({
-      id: 201 + i,
-      home: picks[m1.id] || `Vinnare M${m1.id-100}`,
-      away: picks[m2.id] || `Vinnare M${m2.id-100}`,
-    });
-  }
-
-  const qf = [];
-  for (let i = 0; i < 4; i++) {
-    const m1 = r16[i*2];
-    const m2 = r16[i*2+1];
-    qf.push({
-      id: 301 + i,
-      home: picks[m1.id] || `Vinnare M${m1.id}`,
-      away: picks[m2.id] || `Vinnare M${m2.id}`,
-    });
-  }
-
+function calcKnockoutMatchups(r32, picks) {
+  const r16 = Array.from({length:8}, (_,i) => ({
+    id: 201+i,
+    home: picks[r32[i*2].id] || `Vinnare M${r32[i*2].id-100}`,
+    away: picks[r32[i*2+1].id] || `Vinnare M${r32[i*2+1].id-100}`,
+  }));
+  const qf = Array.from({length:4}, (_,i) => ({
+    id: 301+i,
+    home: picks[r16[i*2].id] || `Vinnare M${r16[i*2].id}`,
+    away: picks[r16[i*2+1].id] || `Vinnare M${r16[i*2+1].id}`,
+  }));
   const sf = [
-    { id: 401, home: picks[301] || `Vinnare QF1`, away: picks[302] || `Vinnare QF2` },
-    { id: 402, home: picks[303] || `Vinnare QF3`, away: picks[304] || `Vinnare QF4` },
+    { id:401, home: picks[301]||"Vinnare QF1", away: picks[302]||"Vinnare QF2" },
+    { id:402, home: picks[303]||"Vinnare QF3", away: picks[304]||"Vinnare QF4" },
   ];
-
-  const final = [
-    { id: 501, home: picks[401] || `Vinnare SF1`, away: picks[402] || `Vinnare SF2` },
-  ];
-
+  const final = [{ id:501, home: picks[401]||"Vinnare SF1", away: picks[402]||"Vinnare SF2" }];
   return { r16, qf, sf, final };
 }
 
 // ================================================
-// RENDERA FLIKAR
+// POINTS
 // ================================================
-window.showTab = function(tab, btn) {
-  ["groups","bracket","leaderboard"].forEach(t => {
-    document.getElementById("tab-"+t).style.display = t === tab ? "block" : "none";
-  });
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-  if (tab === "bracket") renderBracket();
-  if (tab === "leaderboard") renderLeaderboard(); // async, inget await behövs
+function calcUserPoints(tips, picks, groupResults, knockoutResults) {
+  let pts = 0;
+  for (const [id, tip] of Object.entries(tips)) {
+    const actual = groupResults[id];
+    if (!actual) continue;
+    if (tip.homeGoals === actual.homeGoals && tip.awayGoals === actual.awayGoals) { pts += 3; }
+    else {
+      const tr = tip.homeGoals > tip.awayGoals ? "H" : tip.homeGoals < tip.awayGoals ? "A" : "D";
+      const ar = actual.homeGoals > actual.awayGoals ? "H" : actual.homeGoals < actual.awayGoals ? "A" : "D";
+      if (tr === ar) pts += 1;
+    }
+  }
+  for (const [id, pick] of Object.entries(picks)) {
+    if (knockoutResults[id] && knockoutResults[id] === pick) pts += 2;
+  }
+  return pts;
+}
+
+// ================================================
+// DATE FORMAT
+// ================================================
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("sv-SE", { day:"numeric", month:"short" })
+    + " " + d.toLocaleTimeString("sv-SE", { hour:"2-digit", minute:"2-digit" });
+}
+
+// ================================================
+// AVATAR PREVIEW
+// ================================================
+window.previewAvatar = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const prev = document.getElementById("avatar-preview");
+    prev.innerHTML = `<img src="${ev.target.result}" alt="avatar" />`;
+  };
+  reader.readAsDataURL(file);
 };
 
 // ================================================
-// RENDERA GRUPPTABELL
+// AUTH SWITCH
 // ================================================
-function renderStandingsTable(standings) {
-  return `<table class="standings-table">
-    <thead><tr><th>#</th><th>Lag</th><th>S</th><th>V</th><th>O</th><th>F</th><th>GM</th><th>IM</th><th>MS</th><th>P</th></tr></thead>
-    <tbody>${standings.map((t,i) => {
-      const gd = t.gf - t.ga;
-      const cls = i===0?"pos-first":i===1?"pos-second":i===2?"pos-third":"";
-      return `<tr class="${cls}"><td>${i+1}</td><td>${t.name}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${gd>=0?"+":""}${gd}</td><td><strong>${t.pts}</strong></td></tr>`;
-    }).join("")}</tbody>
-  </table>`;
-}
+window.showLogin = function() {
+  document.getElementById("panel-register").style.display = "none";
+  document.getElementById("panel-login").style.display = "flex";
+};
+window.showRegister = function() {
+  document.getElementById("panel-login").style.display = "none";
+  document.getElementById("panel-register").style.display = "flex";
+};
 
 // ================================================
-// RENDERA GRUPPER
+// TAB NAVIGATION
 // ================================================
-function renderGroups(groups) {
-  const container = document.getElementById("groups-container");
-  const tips = getSavedTips();
-  container.innerHTML = "";
-
-  for (const groupName of Object.keys(groups).sort()) {
-    const matches = groups[groupName];
-    const standings = calcGroupStandings(matches, tips);
-    const groupDiv = document.createElement("div");
-    groupDiv.className = "group-block";
-    groupDiv.innerHTML = `<h2>${groupName.replace("GROUP_","Grupp ")}</h2>`;
-
-    for (const match of matches) {
-      const id = match.id;
-      const tip = tips[id];
-      const isSwe = match.homeTeam === "Sverige" || match.awayTeam === "Sverige";
-      const matchDiv = document.createElement("div");
-      matchDiv.className = `match-row ${tip?"saved":""} ${isSwe?"sweden-match":""}`;
-      matchDiv.id = `match-${id}`;
-      matchDiv.innerHTML = `
-        <span class="match-date">${formatDate(match.utcDate)}</span>
-        <div class="match-teams">
-          <span class="team home">${match.homeTeam}</span>
-          <div class="score-input">
-            <input type="number" min="0" max="99" value="${tip?tip.homeGoals:""}" placeholder="-" id="home-${id}" />
-            <span>–</span>
-            <input type="number" min="0" max="99" value="${tip?tip.awayGoals:""}" placeholder="-" id="away-${id}" />
-          </div>
-          <span class="team away">${match.awayTeam}</span>
-        </div>
-        <button class="tip-btn" onclick="submitTip(${id})">Spara</button>
-      `;
-      groupDiv.appendChild(matchDiv);
-    }
-
-    const tableDiv = document.createElement("div");
-    tableDiv.className = "standings-wrapper";
-    tableDiv.id = `standings-${groupName}`;
-    tableDiv.innerHTML = renderStandingsTable(standings);
-    groupDiv.appendChild(tableDiv);
-    container.appendChild(groupDiv);
+window.switchTab = function(tab, el) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById("tab-"+tab).classList.add("active");
+  if (el) el.classList.add("active");
+  else {
+    const navEl = document.querySelector(`[data-tab="${tab}"]`);
+    if (navEl) navEl.classList.add("active");
   }
 
-  document.getElementById("loading").style.display = "none";
+  if (tab === "groups") renderGroups();
+  if (tab === "bracket") renderBracket();
+  if (tab === "leaderboard") renderLeaderboard();
+  if (tab === "leagues") renderLeagues();
+};
+
+// ================================================
+// COUNTDOWN
+// ================================================
+function renderCountdown() {
+  const target = new Date("2026-06-11T21:00:00Z");
+  const now = new Date();
+  const diff = target - now;
+
+  const el = document.getElementById("countdown-display");
+  if (!el) return;
+
+  if (diff <= 0) {
+    el.innerHTML = `<div style="text-align:center;font-family:'Bebas Neue';font-size:1.1rem;color:var(--green);letter-spacing:2px">VM PÅGÅR!</div>`;
+    return;
+  }
+
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+
+  el.innerHTML = `
+    <div style="font-size:0.7rem;color:var(--text-3);text-align:center;margin-bottom:6px;letter-spacing:0.1em;text-transform:uppercase">VM startar om</div>
+    <div class="countdown-grid">
+      <div class="cd-unit"><div class="cd-num">${days}</div><div class="cd-label">Dagar</div></div>
+      <div class="cd-unit" style="align-self:center;padding-bottom:10px;color:var(--text-3);font-size:1.2rem">:</div>
+      <div class="cd-unit"><div class="cd-num">${String(hours).padStart(2,"0")}</div><div class="cd-label">Tim</div></div>
+      <div class="cd-unit" style="align-self:center;padding-bottom:10px;color:var(--text-3);font-size:1.2rem">:</div>
+      <div class="cd-unit"><div class="cd-num">${String(mins).padStart(2,"0")}</div><div class="cd-label">Min</div></div>
+      <div class="cd-unit" style="align-self:center;padding-bottom:10px;color:var(--text-3);font-size:1.2rem">:</div>
+      <div class="cd-unit"><div class="cd-num">${String(secs).padStart(2,"0")}</div><div class="cd-label">Sek</div></div>
+    </div>`;
 }
 
 // ================================================
-// SPARA GRUPPSPELSTIPS
+// RENDER HOME
 // ================================================
+function renderHome() {
+  const user = window._currentUser;
+  if (!user) return;
+
+  // Name + welcome
+  const name = user.displayName ? user.displayName.split(" ")[0] : user.email.split("@")[0];
+  const welcomeEl = document.getElementById("welcome-name");
+  if (welcomeEl) welcomeEl.textContent = `Hej, ${name}!`;
+
+  // Sidebar avatar
+  const sAvatar = document.getElementById("sidebar-avatar");
+  if (user.photoURL) {
+    sAvatar.innerHTML = `<img src="${user.photoURL}" alt="avatar" />`;
+  } else {
+    sAvatar.textContent = name[0].toUpperCase();
+  }
+  const sName = document.getElementById("sidebar-name");
+  if (sName) sName.textContent = user.displayName || name;
+
+  // Stats
+  const tips = getSavedTips();
+  const tipped = Object.keys(tips).length;
+  document.getElementById("stat-tipped").textContent = tipped;
+  document.getElementById("stat-left").textContent = 72 - tipped;
+  updateProgressBar(tipped);
+
+  // Upcoming matches to tip
+  const upcoming = WC_MATCHES.filter(m => !tips[m.id]).slice(0,5);
+  const upEl = document.getElementById("upcoming-matches");
+  if (upEl) {
+    upEl.innerHTML = upcoming.map(m => `
+      <div class="upcoming-match" id="um-${m.id}">
+        <div class="um-teams">${m.homeTeam} vs ${m.awayTeam}</div>
+        <button class="um-tip-btn" onclick="goTipMatch(${m.id})">Tippa →</button>
+      </div>
+    `).join("") || `<p style="color:var(--text-3);font-size:0.85rem;text-align:center;padding:20px">Alla matcher tipsade! 🎉</p>`;
+  }
+
+  // Mini leaderboard
+  renderMiniLeaderboard();
+
+  // Countdown
+  renderCountdown();
+  setInterval(renderCountdown, 1000);
+}
+
+function updateProgressBar(tipped) {
+  const pct = (tipped / 72 * 100).toFixed(1);
+  const bar = document.getElementById("tip-progress-bar");
+  const txt = document.getElementById("tip-progress-text");
+  if (bar) bar.style.width = pct + "%";
+  if (txt) txt.textContent = `${tipped}/72 tipsade`;
+}
+
+async function renderMiniLeaderboard() {
+  const el = document.getElementById("mini-leaderboard");
+  if (!el) return;
+  el.innerHTML = `<p style="color:var(--text-3);font-size:0.82rem;padding:12px 0">Laddar...</p>`;
+
+  try {
+    const allUsers = await window.fetchAllTips();
+    const results = await window.fetchResults();
+    const ranked = allUsers.map(u => ({
+      email: u.email,
+      displayName: u.displayName || u.email?.split("@")[0],
+      photoURL: u.photoURL || "",
+      points: calcUserPoints(u.tips||{}, u.picks||{}, results.groupResults||{}, results.knockoutResults||{})
+    })).sort((a,b) => b.points - a.points).slice(0,5);
+
+    const myEmail = window._currentUser?.email;
+    const myRank = ranked.findIndex(u => u.email === myEmail) + 1;
+    document.getElementById("stat-rank").textContent = myRank || "–";
+    document.getElementById("sidebar-pts").textContent = (ranked.find(u => u.email === myEmail)?.points || 0) + " p";
+    document.getElementById("stat-pts").textContent = ranked.find(u => u.email === myEmail)?.points || 0;
+
+    const rankClasses = ["gold","silver","bronze"];
+    el.innerHTML = ranked.map((u, i) => {
+      const initials = (u.displayName || "?").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+      const avatar = u.photoURL ? `<img src="${u.photoURL}" alt="" />` : initials;
+      const isMe = u.email === myEmail;
+      const rc = rankClasses[i] || "";
+      return `<div class="mini-lb-row ${isMe?"me":""}">
+        <div class="mini-lb-rank ${rc}">${i+1}</div>
+        <div class="mini-lb-avatar">${avatar}</div>
+        <div class="mini-lb-name">${u.displayName || u.email?.split("@")[0]}${isMe?" (du)":""}</div>
+        <div class="mini-lb-pts">${u.points}p</div>
+      </div>`;
+    }).join("") || `<p style="color:var(--text-3);font-size:0.82rem;padding:12px 0">Inga deltagare ännu</p>`;
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--text-3);font-size:0.82rem;padding:12px 0">Kunde inte ladda data</p>`;
+  }
+}
+
+window.goTipMatch = function(matchId) {
+  switchTab("groups", document.querySelector("[data-tab=groups]"));
+  setTimeout(() => {
+    const el = document.getElementById(`match-${matchId}`);
+    if (el) { el.scrollIntoView({behavior:"smooth", block:"center"}); el.style.boxShadow = "0 0 0 2px var(--green)"; setTimeout(()=>el.style.boxShadow="",2000); }
+  }, 300);
+};
+
+// ================================================
+// RENDER GROUPS
+// ================================================
+let activeFilter = "all";
+
+window.filterGroups = function(filter, btn) {
+  activeFilter = filter;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  renderGroups();
+};
+
+function renderGroups() {
+  const container = document.getElementById("groups-container");
+  if (!container) return;
+  const tips = getSavedTips();
+  const allGroups = groupMatchesByGroup(WC_MATCHES);
+
+  container.innerHTML = "";
+
+  for (const groupName of Object.keys(allGroups).sort()) {
+    const matches = allGroups[groupName];
+
+    // Filter
+    let show = true;
+    if (activeFilter === "sweden") show = matches.some(m => m.homeTeam === "Sverige" || m.awayTeam === "Sverige");
+    if (activeFilter === "untipped") show = matches.some(m => !tips[m.id]);
+    if (!show) continue;
+
+    const standings = calcGroupStandings(matches, tips);
+    const label = groupName.replace("GROUP_", "Grupp ");
+
+    const block = document.createElement("div");
+    block.className = "group-block";
+
+    const tippedCount = matches.filter(m => tips[m.id]).length;
+
+    block.innerHTML = `
+      <div class="group-header">
+        <span class="group-label">${label}</span>
+        <span class="group-tag">${tippedCount}/${matches.length} tipsade</span>
+      </div>
+      <div class="group-body">
+        <div class="match-list" id="matches-${groupName}"></div>
+        <div class="standings-wrapper">
+          <table class="standings-table">
+            <thead><tr><th>#</th><th>Lag</th><th>S</th><th>V</th><th>O</th><th>F</th><th>GM</th><th>IM</th><th>MS</th><th>P</th></tr></thead>
+            <tbody id="standings-${groupName}">${renderStandingsRows(standings)}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(block);
+
+    const matchList = document.getElementById(`matches-${groupName}`);
+    for (const match of matches) {
+      if (activeFilter === "untipped" && tips[match.id]) continue;
+
+      const tip = tips[match.id];
+      const isSwe = match.homeTeam === "Sverige" || match.awayTeam === "Sverige";
+      const row = document.createElement("div");
+      row.className = `match-row ${tip ? "saved" : ""} ${isSwe ? "sweden-match" : ""}`;
+      row.id = `match-${match.id}`;
+      row.innerHTML = `
+        <div class="match-date">${formatDate(match.utcDate)}</div>
+        <div class="match-teams">
+          <div class="team-name home">${match.homeTeam}</div>
+          <div class="score-inputs">
+            <input type="number" class="score-input" min="0" max="99" value="${tip ? tip.homeGoals : ""}" placeholder="–" id="home-${match.id}" />
+            <span class="score-sep">:</span>
+            <input type="number" class="score-input" min="0" max="99" value="${tip ? tip.awayGoals : ""}" placeholder="–" id="away-${match.id}" />
+          </div>
+          <div class="team-name away">${match.awayTeam}</div>
+        </div>
+        <button class="tip-btn" onclick="submitTip(${match.id})">Spara</button>
+      `;
+
+      // Enter key saves
+      row.querySelector(`#home-${match.id}`).addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById(`away-${match.id}`).focus(); });
+      row.querySelector(`#away-${match.id}`).addEventListener("keydown", e => { if (e.key === "Enter") submitTip(match.id); });
+
+      matchList.appendChild(row);
+    }
+  }
+
+  updateProgressBar(Object.keys(tips).length);
+}
+
+function renderStandingsRows(standings) {
+  return standings.map((t, i) => {
+    const gd = t.gf - t.ga;
+    const cls = i===0?"pos-first":i===1?"pos-second":i===2?"pos-third":"";
+    return `<tr class="${cls}"><td>${i+1}</td><td>${t.name}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${gd>=0?"+":""}${gd}</td><td><strong>${t.pts}</strong></td></tr>`;
+  }).join("");
+}
+
 window.submitTip = function(matchId) {
   const h = document.getElementById(`home-${matchId}`);
   const a = document.getElementById(`away-${matchId}`);
-  if (h.value === "" || a.value === "") { alert("Fyll i båda!"); return; }
-  saveTip(matchId, parseInt(h.value), parseInt(a.value));
-  document.getElementById(`match-${matchId}`).classList.add("saved");
+  if (!h || !a || h.value === "" || a.value === "") { return; }
 
+  saveTip(matchId, parseInt(h.value), parseInt(a.value));
+
+  const row = document.getElementById(`match-${matchId}`);
+  if (row) row.classList.add("saved");
+
+  // Update standings
   const allGroups = groupMatchesByGroup(WC_MATCHES);
   const tips = getSavedTips();
   const matchObj = WC_MATCHES.find(m => m.id === matchId);
   if (matchObj) {
-    const standings = calcGroupStandings(allGroups[matchObj.group], tips);
-    const wrapper = document.getElementById(`standings-${matchObj.group}`);
-    if (wrapper) wrapper.innerHTML = renderStandingsTable(standings);
+    const tbody = document.getElementById(`standings-${matchObj.group}`);
+    if (tbody) tbody.innerHTML = renderStandingsRows(calcGroupStandings(allGroups[matchObj.group], tips));
   }
 
-  // ← NY RAD: synka till molnet
+  updateProgressBar(Object.keys(tips).length);
   if (window.syncTipsToCloud) window.syncTipsToCloud();
 };
+
 // ================================================
-// RENDERA BRACKET MED KLICKBARA VINNARE
+// RENDER BRACKET
 // ================================================
 function renderBracket() {
+  const container = document.getElementById("bracket-container");
+  if (!container) return;
+
   const tips = getSavedTips();
   const picks = getKnockoutPicks();
   const allGroups = groupMatchesByGroup(WC_MATCHES);
-  const groupStandings = {};
-  for (const [g, matches] of Object.entries(allGroups)) {
-    groupStandings[g] = calcGroupStandings(matches, tips);
-  }
-  const bestThirds = getBestThirds(allGroups, tips);
-  const r32 = calcR32Matchups(groupStandings, bestThirds);
+  const gs = {};
+  for (const [g, m] of Object.entries(allGroups)) gs[g] = calcGroupStandings(m, tips);
+  const thirds = getBestThirds(allGroups, tips);
+  const r32 = calcR32Matchups(gs, thirds);
   const { r16, qf, sf, final } = calcKnockoutMatchups(r32, picks);
 
-  const container = document.getElementById("bracket-container");
-  container.innerHTML = "";
-
   const rounds = [
-    { name: "⚡ Sextondelsfinal", matches: r32 },
-    { name: "⚔️ Åttondelsfinaler", matches: r16 },
-    { name: "🔥 Kvartsfinaler", matches: qf },
-    { name: "🌟 Semifinaler", matches: sf },
-    { name: "🏆 Final", matches: final },
+    { name: "Sextondelsfinal", emoji: "⚡", matches: r32 },
+    { name: "Åttondelsfinaler", emoji: "⚔️", matches: r16 },
+    { name: "Kvartsfinaler", emoji: "🔥", matches: qf },
+    { name: "Semifinaler", emoji: "🌟", matches: sf },
+    { name: "Final", emoji: "🏆", matches: final },
   ];
 
-  for (const round of rounds) {
-    const roundDiv = document.createElement("div");
-    roundDiv.className = "bracket-round";
-    roundDiv.innerHTML = `<h2 class="bracket-title">${round.name}</h2>
-      <p class="bracket-subtitle">Klicka på ett lag för att välja vinnare</p>
-      <div class="bracket-grid">`;
-
-    let cards = "";
-    for (const match of round.matches) {
-      const picked = picks[match.id];
-      const homeActive = picked === match.home ? "active-pick" : "";
-      const awayActive = picked === match.away ? "active-pick" : "";
-      cards += `
-        <div class="bracket-match">
-          <button class="bracket-team-btn ${homeActive}" onclick="pickWinner(${match.id}, '${match.home.replace(/'/g,"\\'")}')">
-            ${match.home}
-          </button>
-          <div class="bracket-vs">vs</div>
-          <button class="bracket-team-btn ${awayActive}" onclick="pickWinner(${match.id}, '${match.away.replace(/'/g,"\\'")}')">
-            ${match.away}
-          </button>
-        </div>`;
-    }
-
-    roundDiv.innerHTML += cards + "</div>";
-    container.appendChild(roundDiv);
-  }
+  container.innerHTML = rounds.map(round => `
+    <div class="bracket-round">
+      <div class="round-header">
+        <span class="round-title">${round.emoji} ${round.name}</span>
+        <span class="round-hint">Klicka på ett lag för att välja vinnare</span>
+      </div>
+      <div class="bracket-grid">
+        ${round.matches.map(m => {
+          const picked = picks[m.id];
+          return `
+            <div class="bracket-card">
+              <button class="bracket-btn ${picked === m.home ? "picked" : ""}" onclick="pickWinner(${m.id}, '${m.home.replace(/'/g,"\\'")}')">
+                ${picked === m.home ? "✓ " : ""}${m.home}
+              </button>
+              <div class="bracket-vs">vs</div>
+              <button class="bracket-btn ${picked === m.away ? "picked" : ""}" onclick="pickWinner(${m.id}, '${m.away.replace(/'/g,"\\'")}')">
+                ${picked === m.away ? "✓ " : ""}${m.away}
+              </button>
+            </div>`;
+        }).join("")}
+      </div>
+    </div>
+  `).join("");
 }
 
 window.pickWinner = function(matchId, winner) {
   saveKnockoutPick(matchId, winner);
   renderBracket();
-  // ← NY RAD: synka till molnet
   if (window.syncTipsToCloud) window.syncTipsToCloud();
 };
 
 // ================================================
-// POÄNGSYSTEM
-// ================================================
-function calcUserPoints(tips, picks, actualGroupResults, actualKnockoutResults) {
-  let pts = 0;
-
-  // Gruppspel
-  for (const [id, tip] of Object.entries(tips)) {
-    const actual = actualGroupResults[id];
-    if (!actual) continue;
-    if (tip.homeGoals === actual.homeGoals && tip.awayGoals === actual.awayGoals) {
-      pts += 3; // Exakt rätt
-    } else {
-      const tipResult = tip.homeGoals > tip.awayGoals ? "H" : tip.homeGoals < tip.awayGoals ? "A" : "D";
-      const actResult = actual.homeGoals > actual.awayGoals ? "H" : actual.homeGoals < actual.awayGoals ? "A" : "D";
-      if (tipResult === actResult) pts += 1; // Rätt utgång
-    }
-  }
-
-  // Slutspel – rätt vinnare
-  for (const [id, pick] of Object.entries(picks)) {
-    if (actualKnockoutResults[id] && actualKnockoutResults[id] === pick) {
-      pts += 2;
-    }
-  }
-
-  return pts;
-}
-
-// ================================================
-// RENDERA LIGATABELL
+// RENDER LEADERBOARD
 // ================================================
 async function renderLeaderboard() {
   const container = document.getElementById("leaderboard-container");
-  container.innerHTML = `<p style="text-align:center;padding:40px;color:#6b7280">⏳ Laddar ligatabell...</p>`;
+  if (!container) return;
+  container.innerHTML = `<p style="text-align:center;padding:60px;color:var(--text-3)">⏳ Laddar topplista...</p>`;
 
-  const tips = getSavedTips();
-  const picks = getKnockoutPicks();
-  const tippedGroups = Object.keys(tips).length;
-  const tippedKnockout = Object.keys(picks).length;
-
-  // Hämta verkliga resultat
-  const results = await window.fetchResults();
-  const { groupResults, knockoutResults } = results;
-
-  // Hämta alla användares tips
-  let allUsers = [];
   try {
-    allUsers = await window.fetchAllTips();
+    const allUsers = await window.fetchAllTips();
+    const results = await window.fetchResults();
+    const myEmail = window._currentUser?.email;
+
+    const ranked = allUsers.map(u => ({
+      email: u.email,
+      displayName: u.displayName || u.email?.split("@")[0],
+      photoURL: u.photoURL || "",
+      points: calcUserPoints(u.tips||{}, u.picks||{}, results.groupResults||{}, results.knockoutResults||{}),
+      tipped: Object.keys(u.tips||{}).length,
+    })).sort((a,b) => b.points - a.points);
+
+    const rankIcons = ["🥇","🥈","🥉"];
+    const rankClass = ["r1","r2","r3"];
+
+    container.innerHTML = `
+      <div class="leaderboard-table-wrap">
+        <table class="lb-table">
+          <thead>
+            <tr>
+              <th style="text-align:center">#</th>
+              <th>Spelare</th>
+              <th style="text-align:center">Tippar</th>
+              <th style="text-align:right">Poäng</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ranked.map((u,i) => {
+              const initials = (u.displayName || "?").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+              const avatar = u.photoURL ? `<img src="${u.photoURL}" alt="" />` : initials;
+              const isMe = u.email === myEmail;
+              return `<tr class="${isMe?"my-row":""}">
+                <td class="lb-rank-num ${rankClass[i]||""}">${rankIcons[i] || i+1}</td>
+                <td>
+                  <div class="lb-user">
+                    <div class="lb-avatar">${avatar}</div>
+                    <div class="lb-name">${u.displayName}${isMe?" (du)":""}</div>
+                  </div>
+                </td>
+                <td class="lb-tipped">${u.tipped}/72</td>
+                <td class="lb-pts">${u.points}</td>
+              </tr>`;
+            }).join("") || `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-3)">Inga deltagare ännu</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:24px;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);font-size:0.85rem;color:var(--text-2)">
+        <p>💡 <strong>Poängsystem:</strong> Exakt rätt resultat = 3p · Rätt utgång = 1p · Slutspelsvinnare = 2p</p>
+        <p style="margin-top:8px">✅ Tips sparas automatiskt till molnet varje gång du tippar</p>
+      </div>
+    `;
   } catch(e) {
-    console.log("Kunde inte hämta alla tips");
+    container.innerHTML = `<p style="text-align:center;padding:60px;color:var(--text-3)">Kunde inte ladda topplistan</p>`;
   }
+}
 
-  // Räkna poäng för varje användare
-  const ranked = allUsers.map(u => ({
-    email: u.email,
-    points: calcUserPoints(u.tips || {}, u.picks || {}, groupResults, knockoutResults),
-    tipped: Object.keys(u.tips || {}).length,
-  })).sort((a,b) => b.points - a.points);
+// ================================================
+// LEAGUES
+// ================================================
+function generateCode() { return Math.random().toString(36).substring(2,8).toUpperCase(); }
 
-  const myEmail = window._auth?.currentUser?.email;
-
-  const rows = ranked.map((u, i) => {
-    const isMe = u.email === myEmail;
-    return `<tr class="${isMe ? "my-row" : ""}">
-      <td>${i+1}</td>
-      <td>${u.email} ${isMe ? "👈" : ""}</td>
-      <td>${u.tipped}/72</td>
-      <td><strong>${u.points}</strong></td>
-    </tr>`;
-  }).join("");
-
-  container.innerHTML = `
-    <div class="leaderboard-wrapper">
-      <h2 class="bracket-title">🏆 Ligatabell</h2>
-
-      <div class="my-stats">
-        <div class="stat-box">
-          <div class="stat-number">${tippedGroups}</div>
-          <div class="stat-label">Tipsade gruppmatcher</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-number">${tippedKnockout}</div>
-          <div class="stat-label">Slutspelsval</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-number">${72 - tippedGroups}</div>
-          <div class="stat-label">Kvar att tippa</div>
-        </div>
-      </div>
-
-      <table class="standings-table" style="max-width:600px;margin:0 auto;">
-        <thead><tr><th>#</th><th>Användare</th><th>Tippar</th><th>Poäng</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="4" style="text-align:center;color:#6b7280;padding:24px">Inga användare ännu</td></tr>`}</tbody>
-      </table>
-
-      <div class="leaderboard-note" style="margin-top:24px">
-        <p>💡 Poäng räknas ut mot verkliga resultat när VM börjar 11 juni.</p>
-        <p>✅ Dina tips sparas automatiskt i molnet varje gång du tippar.</p>
-      </div>
+window.showCreateLeague = function() {
+  document.getElementById("modal-title").textContent = "Skapa ny liga";
+  document.getElementById("modal-body").innerHTML = `
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Liga-namn</label>
+      <input type="text" id="new-league-name" placeholder="T.ex. VM-komparna 2026" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeLeagueModal()">Avbryt</button>
+      <button class="btn-primary" onclick="createLeagueAction()">Skapa liga</button>
     </div>
   `;
-}
-// ================================================
-// DATUM
-// ================================================
-function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("sv-SE", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
+  document.getElementById("league-modal").style.display = "flex";
+};
+
+window.showJoinLeague = function() {
+  document.getElementById("modal-title").textContent = "Gå med i liga";
+  document.getElementById("modal-body").innerHTML = `
+    <p style="color:var(--text-2);font-size:0.88rem;margin-bottom:16px">Ange koden du fått av din vän</p>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Liga-kod</label>
+      <input type="text" id="join-code" placeholder="T.ex. AB12CD" style="text-transform:uppercase;letter-spacing:0.1em;font-family:'DM Mono',monospace" oninput="this.value=this.value.toUpperCase()" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeLeagueModal()">Avbryt</button>
+      <button class="btn-primary" onclick="joinLeagueAction()">Gå med</button>
+    </div>
+  `;
+  document.getElementById("league-modal").style.display = "flex";
+};
+
+window.closeLeagueModal = function(e) {
+  if (!e || e.target.classList.contains("modal-overlay")) {
+    document.getElementById("league-modal").style.display = "none";
+  }
+};
+
+window.createLeagueAction = async function() {
+  const name = document.getElementById("new-league-name").value.trim();
+  if (!name) return;
+
+  const user = window._currentUser;
+  if (!user) return;
+
+  const code = generateCode();
+  try {
+    const col = window.dbCollection("leagues");
+    const { addDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const ref = await addDoc(col, {
+      name, code,
+      owner: user.uid,
+      ownerEmail: user.email,
+      members: [user.uid],
+      memberEmails: [user.email],
+      createdAt: new Date().toISOString()
+    });
+
+    document.getElementById("modal-body").innerHTML = `
+      <p style="color:var(--text-2);margin-bottom:8px">Liga skapad! Dela koden med dina vänner:</p>
+      <div class="league-code-display">
+        <div class="code">${code}</div>
+        <p>Dela denna kod med dina vänner så kan de gå med</p>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="closeLeagueModal();renderLeagues()">Klar</button>
+    `;
+  } catch(e) {
+    console.error(e);
+    alert("Kunde inte skapa liga");
+  }
+};
+
+window.joinLeagueAction = async function() {
+  const code = document.getElementById("join-code").value.trim().toUpperCase();
+  if (!code) return;
+
+  const user = window._currentUser;
+  try {
+    const q = window.dbQuery(window.dbCollection("leagues"), window.dbWhere("code","==",code));
+    const snap = await window.dbGetDocs(q);
+
+    if (snap.empty) { alert("Ingen liga med den koden hittades."); return; }
+
+    const leagueDoc = snap.docs[0];
+    const data = leagueDoc.data();
+
+    if (!data.members.includes(user.uid)) {
+      await window.dbUpdateDoc(leagueDoc.ref, {
+        members: window.dbArrayUnion(user.uid),
+        memberEmails: window.dbArrayUnion(user.email),
+      });
+    }
+
+    closeLeagueModal();
+    renderLeagues();
+    alert(`Du gick med i ligan: ${data.name}! 🎉`);
+  } catch(e) {
+    console.error(e);
+    alert("Något gick fel");
+  }
+};
+
+async function renderLeagues() {
+  const container = document.getElementById("leagues-container");
+  if (!container) return;
+  container.innerHTML = `<p style="color:var(--text-3);padding:40px;text-align:center">Laddar dina ligor...</p>`;
+
+  const user = window._currentUser;
+  if (!user) return;
+
+  try {
+    const q = window.dbQuery(window.dbCollection("leagues"), window.dbWhere("members","array-contains",user.uid));
+    const snap = await window.dbGetDocs(q);
+
+    if (snap.empty) {
+      container.innerHTML = `
+        <div class="league-empty">
+          <div class="big-icon">🏆</div>
+          <p>Du är inte med i någon liga ännu.</p>
+          <p style="margin-top:8px">Skapa en eller gå med med en kod!</p>
+        </div>`;
+      return;
+    }
+
+    let html = `<div class="leagues-grid">`;
+    snap.forEach(doc => {
+      const l = doc.data();
+      const isOwner = l.owner === user.uid;
+      html += `
+        <div class="league-card">
+          ${isOwner ? `<span class="league-card-badge badge-owner">Ägare</span>` : `<span class="league-card-badge badge-active">Medlem</span>`}
+          <div class="league-card-name">${l.name}</div>
+          <div class="league-card-code">Kod: ${l.code}</div>
+          <div class="league-card-meta">
+            <span>👥 ${l.members?.length || 1} deltagare</span>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = `<p style="color:var(--text-3);padding:40px;text-align:center">Kunde inte ladda ligor</p>`;
+  }
 }
 
 // ================================================
-// STARTA
+// INIT
 // ================================================
 window.initApp = function() {
-  document.getElementById("loading").style.display = "none";
-  const groups = groupMatchesByGroup(WC_MATCHES);
-  renderGroups(groups);
+  renderHome();
+  renderGroups();
 };
