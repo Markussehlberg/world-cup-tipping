@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VM 2026 – Tippning</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- INLOGGNINGSSIDA -->
+  <div id="auth-container">
+    <div id="auth-box">
+      <h1>⚽ VM 2026</h1>
+      <p>Logga in eller skapa konto för att tippa</p>
+
+      <input type="email" id="email" placeholder="E-postadress" />
+      <input type="password" id="password" placeholder="Lösenord" />
+
+      <button onclick="login()">Logga in</button>
+      <button onclick="register()">Skapa konto</button>
+
+      <p id="auth-error"></p>
+    </div>
+  </div>
+
+  <!-- HUVUDAPPEN (dold tills man loggat in) -->
+  <div id="app-container" style="display:none;">
+    <header>
+      <h1>⚽ VM 2026 – Tippning</h1>
+      <div>
+        <span id="user-email"></span>
+        <button onclick="logout()">Logga ut</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- NYTT: LIGA-SEKTION -->
+      <section id="league-section">
+        <div class="league-actions">
+          <button onclick="createLeague()">➕ Skapa liga</button>
+          <button onclick="joinLeague()">🔑 Gå med i liga</button>
+        </div>
+        <div id="my-leagues"></div>
+      </section>
+
+      <div class="main-tabs">
+        <button class="tab-btn active" onclick="showTab('groups', this)">⚽ Gruppspel</button>
+        <button class="tab-btn" onclick="showTab('bracket', this)">⚡ Slutspel</button>
+        <button class="tab-btn" onclick="showTab('leaderboard', this)">🏆 Ligatabell</button>
+      </div>
+
+      <div id="tab-groups">
+        <div id="loading">⏳ Laddar matcher...</div>
+        <div id="groups-container"></div>
+      </div>
+
+      <div id="tab-bracket" style="display:none;">
+        <div id="bracket-container"></div>
+      </div>
+
+      <div id="tab-leaderboard" style="display:none;">
+        <div id="leaderboard-container"></div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      getDoc,
+      collection,
+      getDocs,
+      query,
+      where,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // *** DIN FIREBASE CONFIG ***
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkKtaYBv-f33amzSRzFxCirtQKNdHKHyg",
+      authDomain: "world-cup-tipping-e842a.firebaseapp.com",
+      projectId: "world-cup-tipping-e842a",
+      storageBucket: "world-cup-tipping-e842a.firebasestorage.app",
+      messagingSenderId: "243707842771",
+      appId: "1:243707842771:web:f58b571d0c37233a2a4426",
+      measurementId: "G-H5SY09MX0D"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Gör db globalt tillgänglig för app.js
+    window._db = db;
+    window._auth = auth;
+
+    // ------------------------------------------------
+    // PROFIL
+    // ------------------------------------------------
+    window.createUserProfile = async function(user) {
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        displayName: user.email.split("@")[0],
+        photoURL: "",
+        leagues: []
+      });
+    };
+
+    // ------------------------------------------------
+    // SYNKA TIPS TILL FIRESTORE
+    // ------------------------------------------------
+    window.syncTipsToCloud = async function() {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const tips = JSON.parse(localStorage.getItem("vm2026_tips") || "{}");
+      const picks = JSON.parse(localStorage.getItem("vm2026_knockout") || "{}");
+
+      try {
+        await setDoc(doc(db, "tips", user.uid), {
+          email: user.email,
+          tips,
+          picks,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Sync failed:", e);
+      }
+    };
+
+    // ------------------------------------------------
+    // HÄMTA ALLA ANVÄNDARES TIPS (för ligatabell)
+    // ------------------------------------------------
+    window.fetchAllTips = async function() {
+      const snapshot = await getDocs(collection(db, "tips"));
+      const all = [];
+      snapshot.forEach(docSnap => all.push(docSnap.data()));
+      return all;
+    };
+
+    // ------------------------------------------------
+    // HÄMTA VERKLIGA RESULTAT
+    // ------------------------------------------------
+    window.fetchResults = async function() {
+      try {
+        const docSnap = await getDoc(doc(db, "results", "official"));
+        return docSnap.exists()
+          ? docSnap.data()
+          : { groupResults: {}, knockoutResults: {} };
+      } catch (e) {
+        return { groupResults: {}, knockoutResults: {} };
+      }
+    };
+
+    // ------------------------------------------------
+    // LIGOR
+    // ------------------------------------------------
+    function generateLeagueCode() {
+      return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    window.setActiveLeague = function(leagueId) {
+      localStorage.setItem("active_league", leagueId);
+      loadMyLeagues();
+    };
+
+    window.getActiveLeague = function() {
+      return localStorage.getItem("active_league");
+    };
+
+    window.createLeague = async function() {
+      const name = prompt("Namn på liga:");
+      if (!name) return;
+
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const code = generateLeagueCode();
+
+      const leagueRef = doc(collection(db, "leagues"));
+      await setDoc(leagueRef, {
+        name,
+        code,
+        owner: user.uid,
+        members: [user.uid],
+        createdAt: new Date().toISOString()
+      });
+
+      setActiveLeague(leagueRef.id);
+      alert(`Liga skapad!\nKod: ${code}`);
+      await loadMyLeagues();
+    };
+
+    window.joinLeague = async function() {
+      const code = prompt("Skriv liga-kod:");
+      if (!code) return;
+
+      const q = query(
+        collection(db, "leagues"),
+        where("code", "==", code.toUpperCase())
+      );
+
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        alert("Fel kod");
+        return;
+      }
+
+      const leagueDoc = snap.docs[0];
+      const data = leagueDoc.data();
+      const user = auth.currentUser;
+
+      if (!data.members.includes(user.uid)) {
+        await updateDoc(leagueDoc.ref, {
+          members: [...data.members, user.uid]
+        });
+      }
+
+      setActiveLeague(leagueDoc.id);
+      alert(`Du gick med i ligan: ${data.name}`);
+      await loadMyLeagues();
+    };
+
+    window.loadMyLeagues = async function() {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const q = query(
+        collection(db, "leagues"),
+        where("members", "array-contains", user.uid)
+      );
+
+      const snap = await getDocs(q);
+      const container = document.getElementById("my-leagues");
+      const activeLeagueId = getActiveLeague();
+
+      if (snap.empty) {
+        container.innerHTML = `
+          <div class="league-card">
+            <h3>🏆 Mina ligor</h3>
+            <p>Du är inte med i någon liga ännu.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <div class="league-card">
+          <h3>🏆 Mina ligor</h3>
+          <div class="league-list">
+      `;
+
+      snap.forEach(docSnap => {
+        const l = docSnap.data();
+        const isActive = docSnap.id === activeLeagueId;
+
+        html += `
+          <button class="league-pill ${isActive ? "active-league" : ""}" onclick="setActiveLeague('${docSnap.id}')">
+            <span>${l.name}</span>
+            <small>${l.code}</small>
+          </button>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    };
+
+    // ------------------------------------------------
+    // AUTH
+    // ------------------------------------------------
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        document.getElementById("auth-container").style.display = "none";
+        document.getElementById("app-container").style.display = "block";
+        document.getElementById("user-email").textContent = user.email;
+
+        // Ladda ner användarens sparade tips från molnet
+        try {
+          const docSnap = await getDoc(doc(db, "tips", user.uid));
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.tips) localStorage.setItem("vm2026_tips", JSON.stringify(data.tips));
+            if (data.picks) localStorage.setItem("vm2026_knockout", JSON.stringify(data.picks));
+          }
+        } catch (e) {
+          console.log("Kunde inte ladda molntips:", e);
+        }
+
+        await loadMyLeagues();
+        initApp();
+      } else {
+        document.getElementById("auth-container").style.display = "flex";
+        document.getElementById("app-container").style.display = "none";
+      }
+    });
+
+    window.login = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (e) {
+        document.getElementById("auth-error").textContent = "Fel e-post eller lösenord.";
+      }
+    };
+
+    window.register = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const res = await createUserWithEmailAndPassword(auth, email, password);
+        await createUserProfile(res.user);
+      } catch (e) {
+        document.getElementById("auth-error").textContent = "Kunde inte skapa konto. Lösenord minst 6 tecken.";
+      }
+    };
+
+    window.logout = async () => {
+      await syncTipsToCloud();
+      await signOut(auth);
+    };
+  </script>
+
+  <script src="app.js"></script>
+</body>
+</html>
