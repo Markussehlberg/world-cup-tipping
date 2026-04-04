@@ -9,699 +9,491 @@
 </head>
 <body>
 
-  <!-- AUTH SCREEN -->
-  <div id="auth-screen">
-    <div class="auth-bg-overlay"></div>
-    <div class="auth-split">
-      <!-- LEFT: Register -->
-      <div class="auth-panel auth-left" id="panel-register">
-        <div class="auth-panel-inner">
-          <div class="auth-logo">
-            <div class="logo-ball"></div>
-            <span>VM-BET</span>
-          </div>
-          <h2>Skapa konto</h2>
-          <p class="auth-sub">Tävla mot dina vänner i VM 2026</p>
+<!-- ============ AUTH SCREEN ============ -->
+<div id="auth-screen">
+  <div class="auth-bg-overlay"></div>
+  <div class="auth-split">
 
-          <div class="form-group">
+    <!-- REGISTER -->
+    <div class="auth-panel auth-left" id="panel-register">
+      <div class="auth-panel-inner">
+        <div class="auth-logo"><div class="logo-ball"></div><span>VM-BET</span></div>
+        <h2>Skapa konto</h2>
+        <p class="auth-sub">Tävla mot dina vänner i VM 2026</p>
+        <div class="form-group">
+          <label>Förnamn</label>
+          <input type="text" id="reg-firstname" placeholder="Erik" />
+        </div>
+        <div class="form-group">
+          <label>Efternamn</label>
+          <input type="text" id="reg-lastname" placeholder="Svensson" />
+        </div>
+        <div class="form-group">
+          <label>E-postadress</label>
+          <input type="email" id="reg-email" placeholder="erik@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Lösenord</label>
+          <input type="password" id="reg-password" placeholder="Minst 6 tecken" />
+        </div>
+        <div class="form-group">
+          <label>Profilbild (valfritt)</label>
+          <div class="avatar-upload" onclick="document.getElementById('avatar-input').click()">
+            <div class="avatar-preview" id="avatar-preview">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="avatar-upload-text"><span>Välj profilbild</span><small>JPG, PNG – max 5MB</small></div>
+            <button type="button" class="upload-btn">Bläddra</button>
+          </div>
+          <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="previewAvatar(event)" />
+        </div>
+        <button class="btn-primary" onclick="register()">Skapa konto</button>
+        <p class="auth-switch">Har du redan ett konto? <a href="#" onclick="showLogin()">Logga in</a></p>
+        <p id="reg-error" class="auth-error"></p>
+      </div>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="auth-panel auth-right" id="panel-login" style="display:none">
+      <div class="auth-panel-inner">
+        <div class="auth-logo"><div class="logo-ball"></div><span>VM-BET</span></div>
+        <h2>Välkommen tillbaka</h2>
+        <p class="auth-sub">Logga in och tippa dina matcher</p>
+        <div class="form-group">
+          <label>E-postadress</label>
+          <input type="email" id="login-email" placeholder="din@email.com" />
+        </div>
+        <div class="form-group">
+          <label>Lösenord</label>
+          <input type="password" id="login-password" placeholder="••••••••" />
+        </div>
+        <button class="btn-primary" onclick="login()">Logga in</button>
+        <p class="auth-forgot"><a href="#" onclick="showForgotPassword()">Glömt lösenord?</a></p>
+        <p class="auth-switch">Inget konto? <a href="#" onclick="showRegister()">Skapa konto</a></p>
+        <p id="login-error" class="auth-error"></p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="logo-ball sm"></div><span>VM-BET</span></div>
+    <nav class="sidebar-nav">
+
+      <a class="nav-item active" href="#" data-tab="schedule" onclick="switchTab('schedule',this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Gruppschema
+      </a>
+
+      <a class="nav-item" href="#" data-tab="knockout-schedule" onclick="switchTab('knockout-schedule',this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M4 6h4v4H4zM16 6h4v4h-4zM4 14h4v4H4zM16 14h4v4h-4z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 8h4M12 8v8M8 16h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Slutspelsschema
+      </a>
+
+      <a class="nav-item" href="#" data-tab="leagues" onclick="switchTab('leagues',this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+        Ligor
+      </a>
+
+      <a class="nav-item" href="#" data-tab="profile" onclick="switchTab('profile',this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Profil
+      </a>
+
+    </nav>
+
+    <div class="sidebar-user clickable" onclick="switchTab('profile', document.querySelector('[data-tab=profile]'))">
+      <div class="sidebar-avatar" id="sidebar-avatar"></div>
+      <div class="sidebar-user-info">
+        <span id="sidebar-name">Laddar...</span>
+        <small id="sidebar-pts">VM-BET 2026</small>
+      </div>
+      <button class="logout-btn" onclick="event.stopPropagation(); logout();" title="Logga ut">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M17 16l4-4-4-4M21 12H9M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- HEM (dold, bara för att trigga renderHome) -->
+    <div id="tab-home" class="tab-content" style="display:none"></div>
+
+    <!-- GRUPPSCHEMA -->
+    <div id="tab-schedule" class="tab-content active">
+      <div class="page-header">
+        <div>
+          <h1>Gruppspelsschema</h1>
+          <p class="page-sub">VM 2026 · 11 juni – 2 juli · USA, Kanada &amp; Mexiko</p>
+        </div>
+        <div class="header-countdown" id="countdown-display"></div>
+      </div>
+      <div class="schedule-info-box">
+        📅 Alla tider visas i svensk tid (CET/CEST). Tippning sker inuti din liga.
+      </div>
+      <div id="schedule-container"></div>
+    </div>
+
+    <!-- SLUTSPELSSCHEMA -->
+    <div id="tab-knockout-schedule" class="tab-content">
+      <div class="page-header">
+        <div>
+          <h1>Slutspelsschema</h1>
+          <p class="page-sub">VM 2026 · 29 juni – 19 juli · Fastställda matchuppställningar</p>
+        </div>
+      </div>
+      <div class="schedule-info-box">
+        🏆 Matchuppställningarna är redan fastställda av FIFA. Tippning av vinnare sker inuti din liga.
+      </div>
+      <div id="knockout-schedule-container"></div>
+    </div>
+
+    <!-- LIGOR -->
+    <div id="tab-leagues" class="tab-content">
+      <div class="page-header">
+        <h1>Mina ligor</h1>
+        <p class="page-sub">Tävla privat mot vänner · Tippa och se topplistan inuti varje liga</p>
+      </div>
+      <div class="league-actions-row">
+        <button class="btn-primary" onclick="showCreateLeague()">➕ Skapa ny liga</button>
+        <button class="btn-secondary" onclick="showJoinLeague()">🔑 Gå med med kod</button>
+      </div>
+      <div id="leagues-container"></div>
+    </div>
+
+    <!-- LIGA INNER VIEW -->
+    <div id="tab-league-inner" class="tab-content">
+      <div class="page-header" style="align-items:center">
+        <div>
+          <button class="back-btn" onclick="backToLeagues()">← Tillbaka till ligor</button>
+          <h1 id="league-inner-title">Liga</h1>
+          <p class="page-sub" id="league-inner-code"></p>
+        </div>
+      </div>
+
+      <div id="league-inner-loading" style="display:none">
+        <p class="loading-block">⏳ Laddar liga...</p>
+      </div>
+
+      <div id="league-inner-content" style="display:none">
+        <div class="league-inner-tabs">
+          <button class="ltab-btn active" data-ltab="groups" onclick="renderLeagueTabs('groups')">⚽ Gruppspel</button>
+          <button class="ltab-btn" data-ltab="bracket" onclick="renderLeagueTabs('bracket')">🏆 Slutspel</button>
+          <button class="ltab-btn" data-ltab="leaderboard" onclick="renderLeagueTabs('leaderboard')">📊 Topplista</button>
+        </div>
+
+        <div id="ltab-groups" class="league-inner-tab active"></div>
+        <div id="ltab-bracket" class="league-inner-tab"></div>
+        <div id="ltab-leaderboard" class="league-inner-tab"></div>
+      </div>
+    </div>
+
+    <!-- PROFIL -->
+    <div id="tab-profile" class="tab-content">
+      <div class="page-header">
+        <div><h1>Min profil</h1><p class="page-sub">Ändra namn, profilbild och lösenord</p></div>
+      </div>
+      <div class="home-grid">
+
+        <div class="home-card">
+          <div class="card-header"><h3>Profiluppgifter</h3></div>
+          <div class="form-group" style="margin-bottom:14px">
             <label>Förnamn</label>
-            <input type="text" id="reg-firstname" placeholder="Erik" />
+            <input type="text" id="profile-firstname" placeholder="Förnamn" />
           </div>
-
-          <div class="form-group">
+          <div class="form-group" style="margin-bottom:14px">
             <label>Efternamn</label>
-            <input type="text" id="reg-lastname" placeholder="Svensson" />
+            <input type="text" id="profile-lastname" placeholder="Efternamn" />
           </div>
-
-          <div class="form-group">
+          <div class="form-group" style="margin-bottom:14px">
             <label>E-postadress</label>
-            <input type="email" id="reg-email" placeholder="erik@example.com" />
+            <input type="email" id="profile-email-readonly" readonly />
           </div>
-
-          <div class="form-group">
-            <label>Lösenord</label>
-            <input type="password" id="reg-password" placeholder="Minst 6 tecken" />
-          </div>
-
-          <div class="form-group">
+          <div class="form-group" style="margin-bottom:14px">
             <label>Profilbild</label>
-            <div class="avatar-upload" id="avatar-upload-zone" onclick="document.getElementById('avatar-input').click()">
-              <div class="avatar-preview" id="avatar-preview">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <div class="avatar-upload-text">
-                <span>Välj profilbild</span>
-                <small>JPG, PNG – max 5MB</small>
-              </div>
+            <div class="avatar-upload" onclick="document.getElementById('profile-avatar-input').click()">
+              <div class="avatar-preview" id="profile-avatar-preview"></div>
+              <div class="avatar-upload-text"><span>Välj ny profilbild</span><small>JPG, PNG – max 5MB</small></div>
               <button type="button" class="upload-btn">Bläddra</button>
             </div>
-            <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="previewAvatar(event)" />
+            <input type="file" id="profile-avatar-input" accept="image/*" style="display:none" onchange="previewProfileAvatar(event)" />
           </div>
-
-          <button class="btn-primary" onclick="register()">Skapa konto</button>
-          <p class="auth-switch">Har du redan ett konto? <a href="#" onclick="showLogin()">Logga in</a></p>
-          <p id="reg-error" class="auth-error"></p>
+          <button class="btn-primary" onclick="saveProfileChanges()">Spara profil</button>
+          <p id="profile-msg" class="auth-error profile-feedback"></p>
         </div>
-      </div>
 
-      <!-- RIGHT: Login -->
-      <div class="auth-panel auth-right" id="panel-login" style="display:none">
-        <div class="auth-panel-inner">
-          <div class="auth-logo">
-            <div class="logo-ball"></div>
-            <span>VM-BET</span>
+        <div class="home-card">
+          <div class="card-header"><h3>Byt lösenord</h3></div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Nuvarande lösenord</label>
+            <input type="password" id="current-password" placeholder="Nuvarande lösenord" />
           </div>
-          <h2>Välkommen tillbaka</h2>
-          <p class="auth-sub">Logga in och tippa dina matcher</p>
-
-          <div class="form-group">
-            <label>E-postadress</label>
-            <input type="email" id="login-email" placeholder="din@email.com" />
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Nytt lösenord</label>
+            <input type="password" id="new-password" placeholder="Minst 6 tecken" />
           </div>
+          <button class="btn-primary" onclick="changeMyPassword()">Byt lösenord</button>
+          <p id="password-msg" class="auth-error profile-feedback"></p>
 
-          <div class="form-group">
-            <label>Lösenord</label>
-            <input type="password" id="login-password" placeholder="••••••••" />
+          <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border)">
+            <h3 style="font-size:0.98rem;font-weight:700;margin-bottom:8px;color:var(--red)">Radera konto</h3>
+            <p style="font-size:0.84rem;color:var(--text-2);margin-bottom:14px">
+              Detta raderar ditt konto och all din data permanent. Åtgärden kan inte ångras.
+            </p>
+            <button class="btn-delete" onclick="showDeleteAccountModal()">🗑️ Radera mitt konto</button>
           </div>
-
-          <button class="btn-primary" onclick="login()">Logga in</button>
-          <p class="auth-forgot">
-            <a href="#" onclick="showForgotPassword()">Glömt lösenord?</a>
-          </p>
-          <p class="auth-switch">Inget konto? <a href="#" onclick="showRegister()">Skapa konto</a></p>
-          <p id="login-error" class="auth-error"></p>
         </div>
+
       </div>
     </div>
+
+  </main>
+</div>
+
+<!-- LEAGUE MODAL -->
+<div class="modal-overlay" id="league-modal" style="display:none" onclick="closeLeagueModal(event)">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
   </div>
+</div>
 
-  <!-- MAIN APP -->
-  <div id="app" style="display:none">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-logo">
-        <div class="logo-ball sm"></div>
-        <span>VM-BET</span>
-      </div>
-
-      <nav class="sidebar-nav">
-        <a class="nav-item active" href="#" data-tab="home" onclick="switchTab('home',this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M3 12L12 3l9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Hem
-        </a>
-
-        <a class="nav-item" href="#" data-tab="groups" onclick="switchTab('groups',this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M12 3c0 0-4 4-4 9s4 9 4 9" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M12 3c0 0 4 4 4 9s-4 9-4 9" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M3 12h18" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-          Gruppspel
-        </a>
-
-        <a class="nav-item" href="#" data-tab="bracket" onclick="switchTab('bracket',this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M4 6h4v4H4zM16 6h4v4h-4zM4 14h4v4H4zM16 14h4v4h-4z" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M8 8h4M12 8v8M8 16h4M12 16v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          Slutspel
-        </a>
-
-        <a class="nav-item" href="#" data-tab="leagues" onclick="switchTab('leagues',this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-          </svg>
-          Ligor
-        </a>
-
-        <a class="nav-item" href="#" data-tab="leaderboard" onclick="switchTab('leaderboard',this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="10" width="6" height="11" rx="1" stroke="currentColor" stroke-width="1.5"/>
-            <rect x="9" y="4" width="6" height="17" rx="1" stroke="currentColor" stroke-width="1.5"/>
-            <rect x="16" y="7" width="6" height="14" rx="1" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-          Topplista
-        </a>
-
-        <a class="nav-item" href="#" data-tab="profile" onclick="switchTab('profile',this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          Profil
-        </a>
-      </nav>
-
-      <div class="sidebar-user clickable" id="sidebar-user" onclick="switchTab('profile', document.querySelector('[data-tab=profile]'))">
-        <div class="sidebar-avatar" id="sidebar-avatar"></div>
-        <div class="sidebar-user-info">
-          <span id="sidebar-name">Laddar...</span>
-          <small id="sidebar-pts">0 poäng</small>
-        </div>
-        <button class="logout-btn" onclick="event.stopPropagation(); logout();" title="Logga ut">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M17 16l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M21 12H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
-
-      <!-- HOME TAB -->
-      <div id="tab-home" class="tab-content active">
-        <div class="page-header">
-          <div>
-            <h1 id="welcome-name">Välkommen!</h1>
-            <p class="page-sub">VM 2026 · 11 juni – 19 juli · USA, Kanada & Mexiko</p>
-          </div>
-          <div class="header-countdown" id="countdown-display"></div>
-        </div>
-
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-icon green">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-            </div>
-            <div>
-              <div class="stat-num" id="stat-tipped">0</div>
-              <div class="stat-lbl">Tipsade matcher</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <div class="stat-num" id="stat-pts">0</div>
-              <div class="stat-lbl">Poäng hittills</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon yellow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 8v4l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <div>
-              <div class="stat-num" id="stat-left">72</div>
-              <div class="stat-lbl">Matcher kvar</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon red">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="1.5"/>
-                <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-            </div>
-            <div>
-              <div class="stat-num" id="stat-rank">–</div>
-              <div class="stat-lbl">Din ranking</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="home-grid">
-          <div class="home-card">
-            <div class="card-header">
-              <h3>Nästa matcher att tippa</h3>
-              <a href="#" onclick="switchTab('groups', document.querySelector('[data-tab=groups]'))">Se alla →</a>
-            </div>
-            <div id="upcoming-matches"></div>
-          </div>
-
-          <div class="home-card">
-            <div class="card-header">
-              <h3>Topplista – alla spelare</h3>
-              <a href="#" onclick="switchTab('leaderboard', document.querySelector('[data-tab=leaderboard]'))">Se alla →</a>
-            </div>
-            <div id="mini-leaderboard"></div>
-          </div>
-        </div>
-
-        <div class="home-card league-hero">
-          <div class="league-hero-text">
-            <h3>Tävla med vänner</h3>
-            <p>Skapa en privat liga och dela koden – precis som FPL!</p>
-          </div>
-          <div class="league-hero-btns">
-            <button class="btn-primary" onclick="switchTab('leagues', document.querySelector('[data-tab=leagues]')); setTimeout(showCreateLeague,100)">➕ Skapa liga</button>
-            <button class="btn-secondary" onclick="switchTab('leagues', document.querySelector('[data-tab=leagues]')); setTimeout(showJoinLeague,100)">🔑 Gå med i liga</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- GROUPS TAB -->
-      <div id="tab-groups" class="tab-content">
-        <div class="page-header">
-          <div>
-            <h1>Gruppspel</h1>
-            <p class="page-sub">Tippa exakt resultat för varje match · Deadline: 11 juni 2026 kl. 20:00 svensk tid</p>
-          </div>
-          <div class="tip-progress">
-            <span id="tip-progress-text">0/72 tipsade</span>
-            <div class="progress-bar"><div class="progress-fill" id="tip-progress-bar"></div></div>
-          </div>
-        </div>
-
-        <div class="deadline-banner" id="deadline-banner"></div>
-
-        <div class="groups-filter">
-          <button class="filter-btn active" onclick="filterGroups('all',this)">Alla grupper</button>
-          <button class="filter-btn swe" onclick="filterGroups('sweden',this)">🇸🇪 Sverige</button>
-          <button class="filter-btn" onclick="filterGroups('untipped',this)">Ej tipsade</button>
-        </div>
-
-        <div id="groups-container"></div>
-      </div>
-
-      <!-- BRACKET TAB -->
-      <div id="tab-bracket" class="tab-content">
-        <div class="page-header">
-          <div>
-            <h1>Slutspel</h1>
-            <p class="page-sub">Klicka på ett lag för att välja vinnare · Samma deadline gäller: 11 juni 2026 kl. 20:00 svensk tid</p>
-          </div>
-        </div>
-        <div class="deadline-banner" id="knockout-deadline-banner"></div>
-        <div id="bracket-container"></div>
-      </div>
-
-      <!-- LEAGUES TAB -->
-      <div id="tab-leagues" class="tab-content">
-        <div class="page-header">
-          <h1>Mina ligor</h1>
-          <p class="page-sub">Tävla privat mot vänner och kollegor</p>
-        </div>
-
-        <div class="league-actions-row">
-          <button class="btn-primary" onclick="showCreateLeague()">➕ Skapa ny liga</button>
-          <button class="btn-secondary" onclick="showJoinLeague()">🔑 Gå med med kod</button>
-        </div>
-
-        <div id="leagues-container"></div>
-      </div>
-
-      <!-- LEADERBOARD TAB -->
-      <div id="tab-leaderboard" class="tab-content">
-        <div class="page-header">
-          <h1>Topplista</h1>
-          <p class="page-sub">Alla deltagares poäng i realtid</p>
-        </div>
-        <div id="leaderboard-container"></div>
-      </div>
-
-      <!-- PROFILE TAB -->
-      <div id="tab-profile" class="tab-content">
-        <div class="page-header">
-          <div>
-            <h1>Min profil</h1>
-            <p class="page-sub">Ändra namn, profilbild och lösenord</p>
-          </div>
-        </div>
-
-        <div class="home-grid">
-          <div class="home-card">
-            <div class="card-header">
-              <h3>Profiluppgifter</h3>
-            </div>
-
-            <div class="form-group" style="margin-bottom:14px">
-              <label>Förnamn</label>
-              <input type="text" id="profile-firstname" placeholder="Förnamn" />
-            </div>
-
-            <div class="form-group" style="margin-bottom:14px">
-              <label>Efternamn</label>
-              <input type="text" id="profile-lastname" placeholder="Efternamn" />
-            </div>
-
-            <div class="form-group" style="margin-bottom:14px">
-              <label>E-postadress</label>
-              <input type="email" id="profile-email-readonly" readonly />
-            </div>
-
-            <div class="form-group" style="margin-bottom:14px">
-              <label>Profilbild</label>
-              <div class="avatar-upload" onclick="document.getElementById('profile-avatar-input').click()">
-                <div class="avatar-preview" id="profile-avatar-preview"></div>
-                <div class="avatar-upload-text">
-                  <span>Välj ny profilbild</span>
-                  <small>JPG, PNG – max 5MB</small>
-                </div>
-                <button type="button" class="upload-btn">Bläddra</button>
-              </div>
-              <input type="file" id="profile-avatar-input" accept="image/*" style="display:none" onchange="previewProfileAvatar(event)" />
-            </div>
-
-            <button class="btn-primary" onclick="saveProfileChanges()">Spara profil</button>
-            <p id="profile-msg" class="auth-error profile-feedback"></p>
-          </div>
-
-          <div class="home-card">
-            <div class="card-header">
-              <h3>Byt lösenord</h3>
-            </div>
-
-            <div class="form-group" style="margin-bottom:14px">
-              <label>Nuvarande lösenord</label>
-              <input type="password" id="current-password" placeholder="Nuvarande lösenord" />
-            </div>
-
-            <div class="form-group" style="margin-bottom:14px">
-              <label>Nytt lösenord</label>
-              <input type="password" id="new-password" placeholder="Minst 6 tecken" />
-            </div>
-
-            <button class="btn-primary" onclick="changeMyPassword()">Byt lösenord</button>
-            <p id="password-msg" class="auth-error profile-feedback"></p>
-          </div>
-        </div>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- LEAGUE MODAL -->
-  <div class="modal-overlay" id="league-modal" style="display:none" onclick="closeLeagueModal(event)">
-    <div class="modal">
-      <h3 id="modal-title"></h3>
-      <div id="modal-body"></div>
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgot-modal" style="display:none" onclick="closeForgotModal(event)">
+  <div class="modal">
+    <h3>Återställ lösenord</h3>
+    <p style="color:var(--text-2);font-size:0.9rem;margin-bottom:14px">Skriv in din e-postadress så skickar vi en återställningslänk.</p>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>E-postadress</label>
+      <input type="email" id="forgot-email" placeholder="din@email.com" />
+    </div>
+    <p id="forgot-msg" class="modal-message"></p>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeForgotModal()">Avbryt</button>
+      <button class="btn-primary" onclick="requestPasswordReset()">Skicka länk</button>
     </div>
   </div>
+</div>
 
-  <!-- FORGOT PASSWORD MODAL -->
-  <div class="modal-overlay" id="forgot-modal" style="display:none" onclick="closeForgotModal(event)">
-    <div class="modal">
-      <h3>Återställ lösenord</h3>
-      <p style="color:var(--text-2);font-size:0.9rem;margin-bottom:14px">
-        Skriv in din e-postadress så skickar vi en återställningslänk.
-      </p>
-
-      <div class="form-group" style="margin-bottom:16px">
-        <label>E-postadress</label>
-        <input type="email" id="forgot-email" placeholder="din@email.com" />
-      </div>
-
-      <p id="forgot-msg" class="modal-message"></p>
-
-      <div class="modal-btns">
-        <button class="btn-secondary" onclick="closeForgotModal()">Avbryt</button>
-        <button class="btn-primary" onclick="requestPasswordReset()">Skicka länk</button>
-      </div>
+<!-- DELETE ACCOUNT MODAL -->
+<div class="modal-overlay" id="delete-account-modal" style="display:none" onclick="closeDeleteAccountModal(event)">
+  <div class="modal">
+    <h3 style="color:var(--red)">⚠️ Radera konto</h3>
+    <p style="color:var(--text-2);font-size:0.88rem;margin-bottom:16px">
+      Detta raderar ditt konto och all din data permanent. Ange ditt lösenord för att bekräfta.
+    </p>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Lösenord</label>
+      <input type="password" id="delete-confirm-password" placeholder="Ditt lösenord" />
+    </div>
+    <p id="delete-error-msg" class="auth-error" style="margin-bottom:12px"></p>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeDeleteAccountModal()">Avbryt</button>
+      <button class="btn-delete" onclick="confirmDeleteAccount()">Ja, radera mitt konto</button>
     </div>
   </div>
+</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getAuth,
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged,
-      updateProfile,
-      sendPasswordResetEmail,
-      updatePassword,
-      reauthenticateWithCredential,
-      EmailAuthProvider
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail,
+    updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs,
+    query, where, updateDoc, arrayUnion, addDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getStorage, ref, uploadBytes, getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-    import {
-      getFirestore,
-      doc,
-      setDoc,
-      getDoc,
-      collection,
-      getDocs,
-      query,
-      where,
-      updateDoc,
-      arrayUnion,
-      addDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyAkKtaYBv-f33amzSRzFxCirtQKNdHKHyg",
+    authDomain: "world-cup-tipping-e842a.firebaseapp.com",
+    projectId: "world-cup-tipping-e842a",
+    storageBucket: "world-cup-tipping-e842a.firebasestorage.app",
+    messagingSenderId: "243707842771",
+    appId: "1:243707842771:web:f58b571d0c37233a2a4426"
+  };
 
-    import {
-      getStorage,
-      ref,
-      uploadBytes,
-      getDownloadURL
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAkKtaYBv-f33amzSRzFxCirtQKNdHKHyg",
-      authDomain: "world-cup-tipping-e842a.firebaseapp.com",
-      projectId: "world-cup-tipping-e842a",
-      storageBucket: "world-cup-tipping-e842a.firebasestorage.app",
-      messagingSenderId: "243707842771",
-      appId: "1:243707842771:web:f58b571d0c37233a2a4426"
-    };
+  window._auth = auth;
+  window._db = db;
+  window._storage = storage;
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
+  window._firebaseFns = {
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+    onAuthStateChanged, updateProfile, sendPasswordResetEmail, updatePassword,
+    reauthenticateWithCredential, EmailAuthProvider, deleteUser,
+    getDocs, getDoc, setDoc, updateDoc, addDoc, query, where, collection, doc,
+    arrayUnion, uploadBytes, getDownloadURL, ref
+  };
 
-    window._auth = auth;
-    window._db = db;
-    window._storage = storage;
-
-    window._firebaseFns = {
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged,
-      updateProfile,
-      sendPasswordResetEmail,
-      updatePassword,
-      reauthenticateWithCredential,
-      EmailAuthProvider,
-      getDocs,
-      getDoc,
-      setDoc,
-      updateDoc,
-      addDoc,
-      query,
-      where,
-      collection,
-      doc,
-      arrayUnion,
-      uploadBytes,
-      getDownloadURL,
-      ref
-    };
-
-    window.syncTipsToCloud = async function() {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const tips = JSON.parse(localStorage.getItem("vm2026_tips") || "{}");
-      const picks = JSON.parse(localStorage.getItem("vm2026_knockout") || "{}");
-
-      try {
-        await setDoc(doc(db, "tips", user.uid), {
-          email: user.email,
-          displayName: user.displayName || user.email.split("@")[0],
-          photoURL: user.photoURL || "",
-          tips,
-          picks,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (e) {
-        console.error("Sync failed:", e);
-      }
-    };
-
-    window.fetchAllTips = async function() {
-      const snap = await getDocs(collection(db, "tips"));
-      const all = [];
-      snap.forEach(d => all.push(d.data()));
-      return all;
-    };
-
-    window.fetchResults = async function() {
-      try {
-        const d = await getDoc(doc(db, "results", "official"));
-        return d.exists() ? d.data() : { groupResults: {}, knockoutResults: {} };
-      } catch {
-        return { groupResults: {}, knockoutResults: {} };
-      }
-    };
-
-    window.dbDoc = (path, id) => doc(db, path, id);
-    window.dbSetDoc = setDoc;
-    window.dbGetDoc = getDoc;
-    window.dbGetDocs = getDocs;
-    window.dbQuery = query;
-    window.dbWhere = where;
-    window.dbCollection = (p) => collection(db, p);
-    window.dbUpdateDoc = updateDoc;
-    window.dbArrayUnion = arrayUnion;
-    window.dbAddDoc = addDoc;
-    window.storageRef = ref;
-    window.storageUploadBytes = uploadBytes;
-    window.storageGetDownloadURL = getDownloadURL;
-
-    onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    document.getElementById("auth-screen").style.display = "none";
-    document.getElementById("app").style.display = "flex";
-
-    // Rensa lokal data först
-    localStorage.removeItem("vm2026_tips");
-    localStorage.removeItem("vm2026_knockout");
-
+  window.syncTipsToCloud = async function () {
+    const user = auth.currentUser;
+    if (!user) return;
+    const tips = JSON.parse(localStorage.getItem("vm2026_tips") || "{}");
+    const picks = JSON.parse(localStorage.getItem("vm2026_knockout") || "{}");
     try {
-      // Ladda tips/picks
-      const tipsSnap = await getDoc(doc(db, "tips", user.uid));
-      if (tipsSnap.exists()) {
-        const data = tipsSnap.data();
-        if (data.tips) localStorage.setItem("vm2026_tips", JSON.stringify(data.tips));
-        if (data.picks) localStorage.setItem("vm2026_knockout", JSON.stringify(data.picks));
-      }
+      await setDoc(doc(db, "tips", user.uid), {
+        email: user.email,
+        displayName: user.displayName || user.email.split("@")[0],
+        photoURL: user.photoURL || "",
+        tips, picks,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (e) { console.error("Sync failed:", e); }
+  };
 
-      // Ladda profildata från users-collection och uppdatera Auth-profilen
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        // Synka displayName och photoURL från Firestore till Auth-objektet om de saknas
-        if (userData.displayName && !user.displayName) {
-          await updateProfile(user, {
-            displayName: userData.displayName,
-            photoURL: userData.photoURL || ""
-          });
-        } else if (userData.photoURL && userData.displayName) {
-          // Alltid synka från Firestore (source of truth)
-          await updateProfile(user, {
-            displayName: userData.displayName,
-            photoURL: userData.photoURL || ""
-          });
-        }
-        await user.reload();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  window.fetchAllTips = async function () {
+    const snap = await getDocs(collection(db, "tips"));
+    const all = [];
+    snap.forEach(d => all.push(d.data()));
+    return all;
+  };
 
-    window._currentUser = auth.currentUser;
-    window.initApp?.();
-  } else {
-    document.getElementById("auth-screen").style.display = "flex";
-    document.getElementById("app").style.display = "none";
-    localStorage.removeItem("vm2026_tips");
-    localStorage.removeItem("vm2026_knockout");
-  }
-});
+  window.fetchResults = async function () {
+    try {
+      const d = await getDoc(doc(db, "results", "official"));
+      return d.exists() ? d.data() : { groupResults: {}, knockoutResults: {} };
+    } catch { return { groupResults: {}, knockoutResults: {} }; }
+  };
 
-    window.login = async function() {
-      const email = document.getElementById("login-email").value.trim();
-      const pw = document.getElementById("login-password").value;
-      const err = document.getElementById("login-error");
-      err.textContent = "";
+  window.dbDoc = (path, id) => doc(db, path, id);
+  window.dbSetDoc = setDoc;
+  window.dbGetDoc = getDoc;
+  window.dbDeleteDoc = deleteDoc;
+  window.dbGetDocs = getDocs;
+  window.dbQuery = query;
+  window.dbWhere = where;
+  window.dbCollection = (p) => collection(db, p);
+  window.dbUpdateDoc = updateDoc;
+  window.dbArrayUnion = arrayUnion;
+  window.dbAddDoc = addDoc;
+  window.storageRef = ref;
+  window.storageUploadBytes = uploadBytes;
+  window.storageGetDownloadURL = getDownloadURL;
 
-      try {
-        await signInWithEmailAndPassword(auth, email, pw);
-      } catch (e) {
-        console.error(e);
-        err.textContent = "Fel e-post eller lösenord.";
-      }
-    };
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      document.getElementById("auth-screen").style.display = "none";
+      document.getElementById("app").style.display = "flex";
 
-    window.register = async function() {
-      const fn = document.getElementById("reg-firstname").value.trim();
-      const ln = document.getElementById("reg-lastname").value.trim();
-      const email = document.getElementById("reg-email").value.trim().toLowerCase();
-      const pw = document.getElementById("reg-password").value;
-      const err = document.getElementById("reg-error");
-      err.textContent = "";
-
-      if (!fn || !ln) {
-        err.textContent = "Fyll i för- och efternamn.";
-        return;
-      }
-
-      if (!email) {
-        err.textContent = "Fyll i e-postadress.";
-        return;
-      }
-
-      if (pw.length < 6) {
-        err.textContent = "Lösenordet måste vara minst 6 tecken.";
-        return;
-      }
-
-      try {
-        const res = await createUserWithEmailAndPassword(auth, email, pw);
-        let photoURL = "";
-
-        const file = document.getElementById("avatar-input").files[0];
-        if (file) {
-          const sRef = ref(storage, `avatars/${res.user.uid}`);
-          await uploadBytes(sRef, file);
-          photoURL = await getDownloadURL(sRef);
-        }
-
-        const displayName = `${fn} ${ln}`;
-
-        await updateProfile(res.user, {
-          displayName,
-          photoURL
-        });
-
-        await setDoc(doc(db, "users", res.user.uid), {
-          email,
-          displayName,
-          firstName: fn,
-          lastName: ln,
-          photoURL,
-          leagues: [],
-          createdAt: new Date().toISOString()
-        });
-
-      } catch (e) {
-        console.error(e);
-        err.textContent =
-          e.code === "auth/email-already-in-use"
-            ? "E-posten används redan."
-            : "Kunde inte skapa konto.";
-      }
-    };
-
-    window.logout = async function() {
-      try {
-        await window.syncTipsToCloud?.();
-      } catch (e) {
-        console.error(e);
-      }
-
-      await signOut(auth);
       localStorage.removeItem("vm2026_tips");
       localStorage.removeItem("vm2026_knockout");
-    };
-  </script>
 
-  <script src="app.js"></script>
+      try {
+        // Ladda profildata från Firestore och synka till Auth
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.displayName || userData.photoURL) {
+            await updateProfile(user, {
+              displayName: userData.displayName || user.displayName || "",
+              photoURL: userData.photoURL || user.photoURL || ""
+            });
+            await user.reload();
+          }
+        }
+        // Ladda tips/picks
+        const tipsSnap = await getDoc(doc(db, "tips", user.uid));
+        if (tipsSnap.exists()) {
+          const data = tipsSnap.data();
+          if (data.tips) localStorage.setItem("vm2026_tips", JSON.stringify(data.tips));
+          if (data.picks) localStorage.setItem("vm2026_knockout", JSON.stringify(data.picks));
+        }
+      } catch (e) { console.error(e); }
+
+      window.initApp?.();
+    } else {
+      document.getElementById("auth-screen").style.display = "flex";
+      document.getElementById("app").style.display = "none";
+      localStorage.removeItem("vm2026_tips");
+      localStorage.removeItem("vm2026_knockout");
+    }
+  });
+
+  window.login = async function () {
+    const email = document.getElementById("login-email").value.trim();
+    const pw = document.getElementById("login-password").value;
+    const err = document.getElementById("login-error");
+    err.textContent = "";
+    try {
+      await signInWithEmailAndPassword(auth, email, pw);
+    } catch (e) {
+      console.error(e);
+      err.textContent = "Fel e-post eller lösenord.";
+    }
+  };
+
+  window.register = async function () {
+    const fn = document.getElementById("reg-firstname").value.trim();
+    const ln = document.getElementById("reg-lastname").value.trim();
+    const email = document.getElementById("reg-email").value.trim().toLowerCase();
+    const pw = document.getElementById("reg-password").value;
+    const err = document.getElementById("reg-error");
+    err.textContent = "";
+    if (!fn || !ln) { err.textContent = "Fyll i för- och efternamn."; return; }
+    if (!email) { err.textContent = "Fyll i e-postadress."; return; }
+    if (pw.length < 6) { err.textContent = "Lösenordet måste vara minst 6 tecken."; return; }
+    try {
+      const res = await createUserWithEmailAndPassword(auth, email, pw);
+      let photoURL = "";
+      const file = document.getElementById("avatar-input").files[0];
+      if (file) {
+        const sRef = ref(storage, `avatars/${res.user.uid}`);
+        await uploadBytes(sRef, file);
+        photoURL = await getDownloadURL(sRef);
+      }
+      const displayName = `${fn} ${ln}`;
+      await updateProfile(res.user, { displayName, photoURL });
+      await setDoc(doc(db, "users", res.user.uid), {
+        email, displayName, firstName: fn, lastName: ln, photoURL,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error(e);
+      err.textContent = e.code === "auth/email-already-in-use"
+        ? "E-posten används redan." : "Kunde inte skapa konto.";
+    }
+  };
+
+  window.logout = async function () {
+    try { await window.syncTipsToCloud?.(); } catch (e) { console.error(e); }
+    await signOut(auth);
+    localStorage.removeItem("vm2026_tips");
+    localStorage.removeItem("vm2026_knockout");
+  };
+</script>
+
+<script src="app.js"></script>
 </body>
 </html>
