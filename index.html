@@ -88,7 +88,15 @@
     <div class="sidebar-logo"><div class="logo-ball sm"></div><span>VM-BET</span></div>
     <nav class="sidebar-nav">
 
-      <a class="nav-item active" href="#" data-tab="schedule" onclick="switchTab('schedule',this)">
+      <a class="nav-item" href="#" data-tab="home" onclick="switchTab('home',this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M9 21V12h6v9" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        Hem
+      </a>
+
+      <a class="nav-item" href="#" data-tab="schedule" onclick="switchTab('schedule',this)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
           <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -138,17 +146,56 @@
   <!-- MAIN -->
   <main class="main-content">
 
-    <!-- HEM (dold, bara för att trigga renderHome) -->
-    <div id="tab-home" class="tab-content" style="display:none"></div>
+    <!-- HEM -->
+    <div id="tab-home" class="tab-content">
+      <div class="page-header">
+        <div>
+          <h1 id="welcome-heading">Välkommen!</h1>
+          <p class="page-sub" id="welcome-sub">VM 2026 · 11 juni – 19 juli · USA, Kanada &amp; Mexiko</p>
+        </div>
+        <div class="header-countdown" id="countdown-display"></div>
+      </div>
+
+      <div class="home-overview-grid">
+        <div class="overview-card overview-card-green" onclick="switchTab('schedule', document.querySelector('[data-tab=schedule]'))">
+          <div class="ov-icon">⚽</div>
+          <div class="ov-title">Gruppschema</div>
+          <div class="ov-desc">Se alla 72 gruppspelsmatcher · 11 jun – 2 jul</div>
+          <div class="ov-cta">Visa schema →</div>
+        </div>
+        <div class="overview-card overview-card-gold" onclick="switchTab('knockout-schedule', document.querySelector('[data-tab=knockout-schedule]'))">
+          <div class="ov-icon">🏆</div>
+          <div class="ov-title">Slutspelsschema</div>
+          <div class="ov-desc">Sextondelsfinal till Final · 29 jun – 19 jul</div>
+          <div class="ov-cta">Visa schema →</div>
+        </div>
+        <div class="overview-card overview-card-blue" onclick="switchTab('leagues', document.querySelector('[data-tab=leagues]'))">
+          <div class="ov-icon">🎯</div>
+          <div class="ov-title">Mina ligor</div>
+          <div class="ov-desc">Tippa och tävla mot vänner i privata ligor</div>
+          <div class="ov-cta">Öppna ligor →</div>
+        </div>
+        <div class="overview-card overview-card-red">
+          <div class="ov-icon">📊</div>
+          <div class="ov-title">Poängsystem</div>
+          <div class="ov-desc">
+            <div class="points-row"><span class="pts-badge pts-3">3p</span> Exakt rätt resultat</div>
+            <div class="points-row"><span class="pts-badge pts-1">1p</span> Rätt utgång (V/O/F)</div>
+            <div class="points-row"><span class="pts-badge pts-2">2p</span> Rätt slutspelsvinnare</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-leagues-section" id="home-leagues-section"></div>
+    </div>
 
     <!-- GRUPPSCHEMA -->
-    <div id="tab-schedule" class="tab-content active">
+    <div id="tab-schedule" class="tab-content">
       <div class="page-header">
         <div>
           <h1>Gruppspelsschema</h1>
           <p class="page-sub">VM 2026 · 11 juni – 2 juli · USA, Kanada &amp; Mexiko</p>
         </div>
-        <div class="header-countdown" id="countdown-display"></div>
       </div>
       <div class="schedule-info-box">
         📅 Alla tider visas i svensk tid (CET/CEST). Tippning sker inuti din liga.
@@ -165,7 +212,7 @@
         </div>
       </div>
       <div class="schedule-info-box">
-        🏆 Matchuppställningarna är redan fastställda av FIFA. Tippning av vinnare sker inuti din liga.
+        🏆 Matchuppställningarna är fastställda av FIFA. Vinnarna fylls i automatiskt baserat på era grupptips i din liga.
       </div>
       <div id="knockout-schedule-container"></div>
     </div>
@@ -357,12 +404,13 @@
     arrayUnion, uploadBytes, getDownloadURL, ref
   };
 
-  window.syncTipsToCloud = async function () {
+  window.syncTipsToCloud = async function (leagueId) {
     const user = auth.currentUser;
     if (!user) return;
     const tips = JSON.parse(localStorage.getItem("vm2026_tips") || "{}");
     const picks = JSON.parse(localStorage.getItem("vm2026_knockout") || "{}");
     try {
+      // Always sync to the global tips collection (per user)
       await setDoc(doc(db, "tips", user.uid), {
         email: user.email,
         displayName: user.displayName || user.email.split("@")[0],
@@ -370,14 +418,30 @@
         tips, picks,
         updatedAt: new Date().toISOString()
       }, { merge: true });
+
+      // Also sync to the league-specific collection if leagueId provided
+      if (leagueId) {
+        await setDoc(doc(db, "leagues", leagueId, "tips", user.uid), {
+          email: user.email,
+          displayName: user.displayName || user.email.split("@")[0],
+          photoURL: user.photoURL || "",
+          tips, picks,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
     } catch (e) { console.error("Sync failed:", e); }
   };
 
-  window.fetchAllTips = async function () {
-    const snap = await getDocs(collection(db, "tips"));
-    const all = [];
-    snap.forEach(d => all.push(d.data()));
-    return all;
+  window.fetchAllTipsForLeague = async function (leagueId) {
+    try {
+      const snap = await getDocs(collection(db, "leagues", leagueId, "tips"));
+      const all = [];
+      snap.forEach(d => all.push({ uid: d.id, ...d.data() }));
+      return all;
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
   };
 
   window.fetchResults = async function () {
@@ -388,6 +452,15 @@
   };
 
   window.dbDoc = (path, id) => doc(db, path, id);
+  window.dbDocPath = (...segments) => {
+    // Build a doc ref from multiple path segments
+    // segments like ["leagues", leagueId, "tips", userId]
+    let ref = db;
+    for (let i = 0; i < segments.length; i += 2) {
+      ref = doc(ref instanceof Object && ref.type === 'firestore' ? ref : db, segments[i], segments[i+1]);
+    }
+    return ref;
+  };
   window.dbSetDoc = setDoc;
   window.dbGetDoc = getDoc;
   window.dbDeleteDoc = deleteDoc;
@@ -395,6 +468,12 @@
   window.dbQuery = query;
   window.dbWhere = where;
   window.dbCollection = (p) => collection(db, p);
+  window.dbCollectionPath = (...segments) => {
+    if (segments.length === 1) return collection(db, segments[0]);
+    // e.g. ["leagues", leagueId, "tips"]
+    const docRef = doc(db, segments[0], segments[1]);
+    return collection(docRef, segments[2]);
+  };
   window.dbUpdateDoc = updateDoc;
   window.dbArrayUnion = arrayUnion;
   window.dbAddDoc = addDoc;
@@ -411,7 +490,7 @@
       localStorage.removeItem("vm2026_knockout");
 
       try {
-        // Ladda profildata från Firestore och synka till Auth
+        // Load profile data from Firestore and sync to Auth
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
           const userData = userSnap.data();
@@ -423,7 +502,7 @@
             await user.reload();
           }
         }
-        // Ladda tips/picks
+        // Load tips/picks from global tips collection
         const tipsSnap = await getDoc(doc(db, "tips", user.uid));
         if (tipsSnap.exists()) {
           const data = tipsSnap.data();

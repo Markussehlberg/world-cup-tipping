@@ -1,5 +1,5 @@
 // ================================================
-// VM-BET 2026 — app.js
+// VM-BET 2026 — app.js  (COMPLETE REWRITE)
 // ================================================
 
 const SWEDEN_TIMEZONE = "Europe/Stockholm";
@@ -8,6 +8,7 @@ const TOTAL_GROUP_MATCHES = 72;
 
 let activeLeagueId = null;
 let countdownInterval = null;
+let _pendingProfileAvatarFile = null; // Track selected profile avatar file
 
 // ================================================
 // VM 2026 MATCHDATA
@@ -87,48 +88,124 @@ const WC_MATCHES = [
   { id: 72, group: "GROUP_L", utcDate: "2026-06-27T21:00:00Z", homeTeam: "Kroatien",             awayTeam: "Ghana" }
 ];
 
-// Slutspelsschema (fasta matchuppställningar enligt FIFA WC 2026)
-const KNOCKOUT_SCHEDULE = [
-  // Sextondelsfinal (R32) - 29 jun–2 jul
-  { id: 101, round: "Sextondelsfinal", utcDate: "2026-06-29T19:00:00Z", home: "1:a Grupp A", away: "2:a Grupp B" },
-  { id: 102, round: "Sextondelsfinal", utcDate: "2026-06-29T22:00:00Z", home: "1:a Grupp C", away: "2:a Grupp F" },
-  { id: 103, round: "Sextondelsfinal", utcDate: "2026-06-30T19:00:00Z", home: "1:a Grupp E", away: "Bästa 3:a (A/B/C/D)" },
-  { id: 104, round: "Sextondelsfinal", utcDate: "2026-06-30T22:00:00Z", home: "1:a Grupp F", away: "2:a Grupp C" },
-  { id: 105, round: "Sextondelsfinal", utcDate: "2026-07-01T19:00:00Z", home: "1:a Grupp G", away: "Bästa 3:a (A/B/C)" },
-  { id: 106, round: "Sextondelsfinal", utcDate: "2026-07-01T22:00:00Z", home: "1:a Grupp D", away: "Bästa 3:a (D/E/F)" },
-  { id: 107, round: "Sextondelsfinal", utcDate: "2026-07-02T19:00:00Z", home: "1:a Grupp I", away: "Bästa 3:a (G/H/I)" },
-  { id: 108, round: "Sextondelsfinal", utcDate: "2026-07-02T22:00:00Z", home: "1:a Grupp L", away: "Bästa 3:a (J/K/L)" },
-  { id: 109, round: "Sextondelsfinal", utcDate: "2026-07-03T19:00:00Z", home: "2:a Grupp A", away: "2:a Grupp D" },
-  { id: 110, round: "Sextondelsfinal", utcDate: "2026-07-03T22:00:00Z", home: "1:a Grupp B", away: "Bästa 3:a (E/F/G/H)" },
-  { id: 111, round: "Sextondelsfinal", utcDate: "2026-07-04T19:00:00Z", home: "1:a Grupp H", away: "2:a Grupp J" },
-  { id: 112, round: "Sextondelsfinal", utcDate: "2026-07-04T22:00:00Z", home: "1:a Grupp J", away: "2:a Grupp H" },
-  { id: 113, round: "Sextondelsfinal", utcDate: "2026-07-05T19:00:00Z", home: "1:a Grupp K", away: "Bästa 3:a (I/J/K)" },
-  { id: 114, round: "Sextondelsfinal", utcDate: "2026-07-05T22:00:00Z", home: "2:a Grupp K", away: "2:a Grupp L" },
-  { id: 115, round: "Sextondelsfinal", utcDate: "2026-07-06T19:00:00Z", home: "2:a Grupp G", away: "Bästa 3:a (resterande)" },
-  { id: 116, round: "Sextondelsfinal", utcDate: "2026-07-06T22:00:00Z", home: "2:a Grupp E", away: "2:a Grupp I" },
-  // Åttondelsfinaler (R16) - 4–7 jul
-  { id: 201, round: "Åttondelsfinaler", utcDate: "2026-07-09T19:00:00Z", home: "Vinnare M101", away: "Vinnare M102" },
-  { id: 202, round: "Åttondelsfinaler", utcDate: "2026-07-09T22:00:00Z", home: "Vinnare M103", away: "Vinnare M104" },
-  { id: 203, round: "Åttondelsfinaler", utcDate: "2026-07-10T19:00:00Z", home: "Vinnare M105", away: "Vinnare M106" },
-  { id: 204, round: "Åttondelsfinaler", utcDate: "2026-07-10T22:00:00Z", home: "Vinnare M107", away: "Vinnare M108" },
-  { id: 205, round: "Åttondelsfinaler", utcDate: "2026-07-11T19:00:00Z", home: "Vinnare M109", away: "Vinnare M110" },
-  { id: 206, round: "Åttondelsfinaler", utcDate: "2026-07-11T22:00:00Z", home: "Vinnare M111", away: "Vinnare M112" },
-  { id: 207, round: "Åttondelsfinaler", utcDate: "2026-07-12T19:00:00Z", home: "Vinnare M113", away: "Vinnare M114" },
-  { id: 208, round: "Åttondelsfinaler", utcDate: "2026-07-12T22:00:00Z", home: "Vinnare M115", away: "Vinnare M116" },
-  // Kvartsfinaler - 10–11 jul
-  { id: 301, round: "Kvartsfinaler",    utcDate: "2026-07-14T19:00:00Z", home: "Vinnare M201", away: "Vinnare M202" },
-  { id: 302, round: "Kvartsfinaler",    utcDate: "2026-07-14T22:00:00Z", home: "Vinnare M203", away: "Vinnare M204" },
-  { id: 303, round: "Kvartsfinaler",    utcDate: "2026-07-15T19:00:00Z", home: "Vinnare M205", away: "Vinnare M206" },
-  { id: 304, round: "Kvartsfinaler",    utcDate: "2026-07-15T22:00:00Z", home: "Vinnare M207", away: "Vinnare M208" },
-  // Semifinaler - 14–15 jul
-  { id: 401, round: "Semifinaler",      utcDate: "2026-07-17T22:00:00Z", home: "Vinnare QF1", away: "Vinnare QF2" },
-  { id: 402, round: "Semifinaler",      utcDate: "2026-07-18T22:00:00Z", home: "Vinnare QF3", away: "Vinnare QF4" },
-  // Final - 19 jul
-  { id: 501, round: "Final",            utcDate: "2026-07-19T20:00:00Z", home: "Vinnare SF1", away: "Vinnare SF2" }
-];
+// ================================================
+// KNOCKOUT SCHEDULE (fixed FIFA WC 2026 bracket)
+// ================================================
+// This describes the STRUCTURE — which group positions meet which
+const KNOCKOUT_STRUCTURE = {
+  // Round of 32 (Sextondelsfinal) - matches 101-116
+  R32: [
+    { id: 101, home: "1:a Grupp A",  away: "2:a Grupp B",           date: "2026-06-29T19:00:00Z" },
+    { id: 102, home: "1:a Grupp C",  away: "2:a Grupp F",           date: "2026-06-29T22:00:00Z" },
+    { id: 103, home: "1:a Grupp E",  away: "Bästa 3:a (A/B/C/D)",   date: "2026-06-30T19:00:00Z" },
+    { id: 104, home: "1:a Grupp F",  away: "2:a Grupp C",           date: "2026-06-30T22:00:00Z" },
+    { id: 105, home: "1:a Grupp G",  away: "Bästa 3:a (A/B/C)",     date: "2026-07-01T19:00:00Z" },
+    { id: 106, home: "1:a Grupp D",  away: "Bästa 3:a (D/E/F)",     date: "2026-07-01T22:00:00Z" },
+    { id: 107, home: "1:a Grupp I",  away: "Bästa 3:a (G/H/I)",     date: "2026-07-02T19:00:00Z" },
+    { id: 108, home: "1:a Grupp L",  away: "Bästa 3:a (J/K/L)",     date: "2026-07-02T22:00:00Z" },
+    { id: 109, home: "2:a Grupp A",  away: "2:a Grupp D",           date: "2026-07-03T19:00:00Z" },
+    { id: 110, home: "1:a Grupp B",  away: "Bästa 3:a (E/F/G/H)",   date: "2026-07-03T22:00:00Z" },
+    { id: 111, home: "1:a Grupp H",  away: "2:a Grupp J",           date: "2026-07-04T19:00:00Z" },
+    { id: 112, home: "1:a Grupp J",  away: "2:a Grupp H",           date: "2026-07-04T22:00:00Z" },
+    { id: 113, home: "1:a Grupp K",  away: "Bästa 3:a (I/J/K)",     date: "2026-07-05T19:00:00Z" },
+    { id: 114, home: "2:a Grupp K",  away: "2:a Grupp L",           date: "2026-07-05T22:00:00Z" },
+    { id: 115, home: "2:a Grupp G",  away: "Bästa 3:a (resterande)", date: "2026-07-06T19:00:00Z" },
+    { id: 116, home: "2:a Grupp E",  away: "2:a Grupp I",           date: "2026-07-06T22:00:00Z" },
+  ],
+  R16: [
+    { id: 201, home: "Vinnare M101", away: "Vinnare M102", date: "2026-07-09T19:00:00Z" },
+    { id: 202, home: "Vinnare M103", away: "Vinnare M104", date: "2026-07-09T22:00:00Z" },
+    { id: 203, home: "Vinnare M105", away: "Vinnare M106", date: "2026-07-10T19:00:00Z" },
+    { id: 204, home: "Vinnare M107", away: "Vinnare M108", date: "2026-07-10T22:00:00Z" },
+    { id: 205, home: "Vinnare M109", away: "Vinnare M110", date: "2026-07-11T19:00:00Z" },
+    { id: 206, home: "Vinnare M111", away: "Vinnare M112", date: "2026-07-11T22:00:00Z" },
+    { id: 207, home: "Vinnare M113", away: "Vinnare M114", date: "2026-07-12T19:00:00Z" },
+    { id: 208, home: "Vinnare M115", away: "Vinnare M116", date: "2026-07-12T22:00:00Z" },
+  ],
+  QF: [
+    { id: 301, home: "Vinnare M201", away: "Vinnare M202", date: "2026-07-14T19:00:00Z" },
+    { id: 302, home: "Vinnare M203", away: "Vinnare M204", date: "2026-07-14T22:00:00Z" },
+    { id: 303, home: "Vinnare M205", away: "Vinnare M206", date: "2026-07-15T19:00:00Z" },
+    { id: 304, home: "Vinnare M207", away: "Vinnare M208", date: "2026-07-15T22:00:00Z" },
+  ],
+  SF: [
+    { id: 401, home: "Vinnare QF1", away: "Vinnare QF2", date: "2026-07-17T22:00:00Z" },
+    { id: 402, home: "Vinnare QF3", away: "Vinnare QF4", date: "2026-07-18T22:00:00Z" },
+  ],
+  Final: [
+    { id: 501, home: "Vinnare SF1", away: "Vinnare SF2", date: "2026-07-19T20:00:00Z" },
+  ]
+};
 
 // ================================================
-// HJÄLPFUNKTIONER
+// CALCULATE GROUP STANDINGS FROM TIPS
+// ================================================
+function calcGroupStandings(groupMatches, tips) {
+  const teams = {};
+  for (const m of groupMatches) {
+    if (!teams[m.homeTeam]) teams[m.homeTeam] = { name: m.homeTeam, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 };
+    if (!teams[m.awayTeam]) teams[m.awayTeam] = { name: m.awayTeam, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 };
+    const tip = tips[m.id];
+    if (!tip) continue;
+    const hg = Number(tip.homeGoals), ag = Number(tip.awayGoals);
+    teams[m.homeTeam].p++; teams[m.awayTeam].p++;
+    teams[m.homeTeam].gf += hg; teams[m.homeTeam].ga += ag;
+    teams[m.awayTeam].gf += ag; teams[m.awayTeam].ga += hg;
+    if (hg > ag) { teams[m.homeTeam].w++; teams[m.homeTeam].pts+=3; teams[m.awayTeam].l++; }
+    else if (hg < ag) { teams[m.awayTeam].w++; teams[m.awayTeam].pts+=3; teams[m.homeTeam].l++; }
+    else { teams[m.homeTeam].d++; teams[m.homeTeam].pts++; teams[m.awayTeam].d++; teams[m.awayTeam].pts++; }
+  }
+  return Object.values(teams).sort((a,b) => {
+    if (b.pts !== a.pts) return b.pts - a.pts;
+    const gdA = a.gf-a.ga, gdB = b.gf-b.ga;
+    if (gdB !== gdA) return gdB - gdA;
+    if (b.gf !== a.gf) return b.gf - a.gf;
+    return a.name.localeCompare(b.name, "sv");
+  });
+}
+
+// Get predicted group winner/runner-up from tips
+function getGroupPrediction(groupKey, tips) {
+  const matches = WC_MATCHES.filter(m => m.group === groupKey);
+  const standings = calcGroupStandings(matches, tips);
+  return {
+    first: standings[0]?.name || `1:a ${groupKey.replace("GROUP_","Grupp ")}`,
+    second: standings[1]?.name || `2:a ${groupKey.replace("GROUP_","Grupp ")}`,
+    third: standings[2]?.name || `3:a ${groupKey.replace("GROUP_","Grupp ")}`,
+    fourth: standings[3]?.name || `4:a ${groupKey.replace("GROUP_","Grupp ")}`
+  };
+}
+
+// Build resolved knockout bracket from tips
+function buildResolvedKnockout(tips, picks) {
+  const allGroups = ["A","B","C","D","E","F","G","H","I","J","K","L"];
+  const groupPreds = {};
+  for (const g of allGroups) {
+    groupPreds[g] = getGroupPrediction(`GROUP_${g}`, tips);
+  }
+
+  // Map slot descriptions to actual predicted teams
+  function resolveSlot(slot) {
+    const groupFirst = slot.match(/^1:a Grupp ([A-L])$/);
+    if (groupFirst) return groupPreds[groupFirst[1]].first;
+    const groupSecond = slot.match(/^2:a Grupp ([A-L])$/);
+    if (groupSecond) return groupPreds[groupSecond[1]].second;
+    // For "best third-place" slots - simplified: just show slot label
+    return slot;
+  }
+
+  // Build R32 with resolved teams
+  const r32resolved = KNOCKOUT_STRUCTURE.R32.map(m => ({
+    ...m,
+    homeResolved: resolveSlot(m.home),
+    awayResolved: resolveSlot(m.away),
+  }));
+
+  return { r32resolved, groupPreds };
+}
+
+// ================================================
+// HELPERS
 // ================================================
 function isBeforeDeadline() {
   return new Date() < DEADLINE_UTC;
@@ -178,19 +255,22 @@ function generateCode() {
 }
 
 // ================================================
-// SIDEBAR UPDATE
+// SIDEBAR UPDATE — the critical piece
 // ================================================
 function updateSidebar() {
   const user = window._auth?.currentUser;
   if (!user) return;
+
   const sidebarAvatar = document.getElementById("sidebar-avatar");
   if (sidebarAvatar) {
     if (user.photoURL) {
-      sidebarAvatar.innerHTML = `<img src="${user.photoURL}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      sidebarAvatar.innerHTML = `<img src="${escapeHtml(user.photoURL)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.textContent='${initialsFromName(user.displayName||user.email)}'" />`;
     } else {
+      sidebarAvatar.innerHTML = "";
       sidebarAvatar.textContent = initialsFromName(user.displayName || user.email);
     }
   }
+
   const sidebarName = document.getElementById("sidebar-name");
   if (sidebarName) sidebarName.textContent = user.displayName || user.email;
 }
@@ -209,6 +289,7 @@ window.switchTab = function (tab, el) {
     const navEl = document.querySelector(`[data-tab="${tab}"]`);
     if (navEl) navEl.classList.add("active");
   }
+  if (tab === "home") renderHome();
   if (tab === "schedule") renderSchedule();
   if (tab === "knockout-schedule") renderKnockoutSchedule();
   if (tab === "leagues") renderLeagues();
@@ -249,17 +330,62 @@ function renderCountdown() {
 function renderHome() {
   const user = window._auth?.currentUser;
   if (!user) return;
+
   const firstName = user.displayName ? user.displayName.split(" ")[0] : user.email.split("@")[0];
-  const welcomeEl = document.getElementById("welcome-name");
-  if (welcomeEl) welcomeEl.textContent = `Hej, ${firstName}!`;
+  const lastName  = user.displayName ? user.displayName.split(" ").slice(1).join(" ") : "";
+  const fullName  = user.displayName || user.email.split("@")[0];
+
+  const headingEl = document.getElementById("welcome-heading");
+  if (headingEl) headingEl.textContent = `Hej, ${escapeHtml(fullName)}! 👋`;
+
   updateSidebar();
   renderCountdown();
   if (countdownInterval) clearInterval(countdownInterval);
   countdownInterval = setInterval(renderCountdown, 1000);
+
+  // Show leagues quick-access
+  renderHomeLeagues();
+}
+
+async function renderHomeLeagues() {
+  const section = document.getElementById("home-leagues-section");
+  if (!section) return;
+  const user = window._auth?.currentUser;
+  if (!user) return;
+  try {
+    const q = window.dbQuery(window.dbCollection("leagues"), window.dbWhere("members", "array-contains", user.uid));
+    const snap = await window.dbGetDocs(q);
+    if (snap.empty) {
+      section.innerHTML = `
+        <div class="home-section-title">Mina ligor</div>
+        <div class="no-leagues-home">
+          <p>Du är inte med i någon liga ännu. <a href="#" onclick="switchTab('leagues', document.querySelector('[data-tab=leagues]'))" style="color:var(--green);font-weight:700;">Skapa eller gå med i en liga →</a></p>
+        </div>`;
+      return;
+    }
+    const leagues = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    section.innerHTML = `
+      <div class="home-section-title">Mina ligor</div>
+      <div class="leagues-grid">
+        ${leagues.map(league => `
+          <div class="league-card" onclick="openLeague('${league.id}')">
+            ${league.owner === user.uid
+              ? `<span class="league-card-badge badge-owner">Ägare</span>`
+              : `<span class="league-card-badge badge-active">Medlem</span>`}
+            <div class="league-card-name">${escapeHtml(league.name)}</div>
+            <div class="league-card-code">Kod: <strong>${escapeHtml(league.code)}</strong></div>
+            <div class="league-card-meta">👥 ${league.members?.length || 1} deltagare</div>
+            <div class="league-card-cta">Öppna och tippa →</div>
+          </div>
+        `).join("")}
+      </div>`;
+  } catch(e) {
+    console.error(e);
+  }
 }
 
 // ================================================
-// SCHEMA GRUPPSPEL (READ-ONLY)
+// SCHEMA GRUPPSPEL (READ-ONLY public view)
 // ================================================
 function renderSchedule() {
   const container = document.getElementById("schedule-container");
@@ -274,9 +400,13 @@ function renderSchedule() {
   container.innerHTML = Object.keys(byGroup).sort().map(groupName => {
     const matches = byGroup[groupName];
     const label = groupName.replace("GROUP_", "Grupp ");
+    const teams = [...new Set(matches.flatMap(m => [m.homeTeam, m.awayTeam]))];
     return `
       <div class="schedule-group">
-        <div class="schedule-group-header">${escapeHtml(label)}</div>
+        <div class="schedule-group-header">
+          ${escapeHtml(label)}
+          <span class="group-teams-inline">${teams.map(t => escapeHtml(t)).join(" · ")}</span>
+        </div>
         ${matches.map(m => `
           <div class="schedule-row ${m.homeTeam === "Sverige" || m.awayTeam === "Sverige" ? "sweden-match" : ""}">
             <div class="sr-date">${formatDate(m.utcDate)}</div>
@@ -292,38 +422,35 @@ function renderSchedule() {
 }
 
 // ================================================
-// SCHEMA SLUTSPEL (READ-ONLY)
+// SCHEMA SLUTSPEL (READ-ONLY public view)
 // ================================================
 function renderKnockoutSchedule() {
   const container = document.getElementById("knockout-schedule-container");
   if (!container) return;
 
-  const byRound = KNOCKOUT_SCHEDULE.reduce((acc, m) => {
-    if (!acc[m.round]) acc[m.round] = [];
-    acc[m.round].push(m);
-    return acc;
-  }, {});
+  const rounds = [
+    { key: "R32",   label: "⚡ Sextondelsfinal",  matches: KNOCKOUT_STRUCTURE.R32 },
+    { key: "R16",   label: "⚔️ Åttondelsfinaler", matches: KNOCKOUT_STRUCTURE.R16 },
+    { key: "QF",    label: "🔥 Kvartsfinaler",    matches: KNOCKOUT_STRUCTURE.QF },
+    { key: "SF",    label: "🌟 Semifinaler",       matches: KNOCKOUT_STRUCTURE.SF },
+    { key: "Final", label: "🏆 Final",             matches: KNOCKOUT_STRUCTURE.Final },
+  ];
 
-  const roundOrder = ["Sextondelsfinal", "Åttondelsfinaler", "Kvartsfinaler", "Semifinaler", "Final"];
-  const roundEmoji = { "Sextondelsfinal": "⚡", "Åttondelsfinaler": "⚔️", "Kvartsfinaler": "🔥", "Semifinaler": "🌟", "Final": "🏆" };
-
-  container.innerHTML = roundOrder.map(round => {
-    const matches = byRound[round] || [];
-    return `
-      <div class="schedule-group">
-        <div class="schedule-group-header">${roundEmoji[round]} ${round}</div>
-        ${matches.map(m => `
-          <div class="schedule-row">
-            <div class="sr-date">${formatDate(m.utcDate)}</div>
-            <div class="sr-teams">
-              <span class="sr-home">${escapeHtml(m.home)}</span>
-              <span class="sr-vs">vs</span>
-              <span class="sr-away">${escapeHtml(m.away)}</span>
-            </div>
+  container.innerHTML = rounds.map(r => `
+    <div class="schedule-group">
+      <div class="schedule-group-header">${r.label}</div>
+      ${r.matches.map(m => `
+        <div class="schedule-row">
+          <div class="sr-date">${formatDate(m.date)}</div>
+          <div class="sr-teams">
+            <span class="sr-home">${escapeHtml(m.home)}</span>
+            <span class="sr-vs">vs</span>
+            <span class="sr-away">${escapeHtml(m.away)}</span>
           </div>
-        `).join("")}
-      </div>`;
-  }).join("");
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
 }
 
 // ================================================
@@ -431,7 +558,7 @@ window.createLeagueAction = async function () {
     showToast("Liga skapad!");
   } catch (e) {
     console.error(e);
-    showToast("Kunde inte skapa liga. Kontrollera Firestore-regler.", "error");
+    showToast("Kunde inte skapa liga.", "error");
   }
 };
 
@@ -461,13 +588,12 @@ window.joinLeagueAction = async function () {
 };
 
 // ================================================
-// ÖPPNA EN LIGA (tipping + topplista inuti)
+// ÖPPNA EN LIGA
 // ================================================
 window.openLeague = async function (leagueId) {
   activeLeagueId = leagueId;
   const user = window._auth?.currentUser;
 
-  // Visa liga-vyn
   document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-league-inner").classList.add("active");
   document.getElementById("league-inner-loading").style.display = "block";
@@ -475,28 +601,50 @@ window.openLeague = async function (leagueId) {
 
   try {
     const leagueDoc = await window.dbGetDoc(window.dbDoc("leagues", leagueId));
+    if (!leagueDoc.exists()) { showToast("Ligan hittades inte.", "error"); return; }
     const league = leagueDoc.data();
 
     document.getElementById("league-inner-title").textContent = league.name;
-    document.getElementById("league-inner-code").textContent = `Kod: ${league.code}`;
-    document.getElementById("league-inner-loading").style.display = "none";
-    document.getElementById("league-inner-content").style.display = "block";
+    document.getElementById("league-inner-code").textContent = `Kod: ${league.code} · ${league.members?.length || 1} deltagare`;
 
-    // Ladda tips för denna användare från Firestore
-    const tipsDoc = await window.dbGetDoc(window.dbDoc("tips", user.uid));
-    const myData = tipsDoc.exists() ? tipsDoc.data() : {};
-    const myTips = myData.tips || {};
-    const myPicks = myData.picks || {};
+    // Load this user's tips from league subcollection first, fallback to global
+    let myTips = {}, myPicks = {};
+    try {
+      const leagueTipDoc = await window.dbGetDoc(window.dbDoc(`leagues/${leagueId}/tips`, user.uid));
+      if (leagueTipDoc.exists()) {
+        const d = leagueTipDoc.data();
+        myTips = d.tips || {};
+        myPicks = d.picks || {};
+      } else {
+        // fallback to global tips
+        const globalTipDoc = await window.dbGetDoc(window.dbDoc("tips", user.uid));
+        if (globalTipDoc.exists()) {
+          const d = globalTipDoc.data();
+          myTips = d.tips || {};
+          myPicks = d.picks || {};
+          // copy them over to league subcollection
+          await window.syncTipsToCloud(leagueId);
+        }
+      }
+    } catch(e) { console.error(e); }
 
-    // Spara lokalt
     localStorage.setItem("vm2026_tips", JSON.stringify(myTips));
     localStorage.setItem("vm2026_knockout", JSON.stringify(myPicks));
 
-    renderLeagueTabs("groups");
-    renderLeagueLeaderboard(league, leagueId);
+    document.getElementById("league-inner-loading").style.display = "none";
+    document.getElementById("league-inner-content").style.display = "block";
+
+    // Reset to groups tab
+    document.querySelectorAll(".ltab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".league-inner-tab").forEach(t => t.classList.remove("active"));
+    document.querySelector("[data-ltab='groups']").classList.add("active");
+    document.getElementById("ltab-groups").classList.add("active");
+
+    renderLeagueGroups();
   } catch (e) {
     console.error(e);
     showToast("Kunde inte öppna ligan.", "error");
+    document.getElementById("league-inner-loading").style.display = "none";
   }
 };
 
@@ -519,7 +667,7 @@ window.backToLeagues = function () {
 };
 
 // ================================================
-// GRUPPSPEL INSIDE LIGA
+// TIPS PERSISTENCE
 // ================================================
 function getSavedTips() { return JSON.parse(localStorage.getItem("vm2026_tips") || "{}"); }
 function saveTip(id, hg, ag) {
@@ -538,30 +686,6 @@ function groupMatchesByGroup(matches) {
   return matches.reduce((acc, m) => { if (!acc[m.group]) acc[m.group] = []; acc[m.group].push(m); return acc; }, {});
 }
 
-function calcGroupStandings(groupMatches, tips) {
-  const teams = {};
-  for (const m of groupMatches) {
-    if (!teams[m.homeTeam]) teams[m.homeTeam] = { name: m.homeTeam, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 };
-    if (!teams[m.awayTeam]) teams[m.awayTeam] = { name: m.awayTeam, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 };
-    const tip = tips[m.id];
-    if (!tip) continue;
-    const hg = Number(tip.homeGoals), ag = Number(tip.awayGoals);
-    teams[m.homeTeam].p++; teams[m.awayTeam].p++;
-    teams[m.homeTeam].gf += hg; teams[m.homeTeam].ga += ag;
-    teams[m.awayTeam].gf += ag; teams[m.awayTeam].ga += hg;
-    if (hg > ag) { teams[m.homeTeam].w++; teams[m.homeTeam].pts+=3; teams[m.awayTeam].l++; }
-    else if (hg < ag) { teams[m.awayTeam].w++; teams[m.awayTeam].pts+=3; teams[m.homeTeam].l++; }
-    else { teams[m.homeTeam].d++; teams[m.homeTeam].pts++; teams[m.awayTeam].d++; teams[m.awayTeam].pts++; }
-  }
-  return Object.values(teams).sort((a,b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    const gdA = a.gf-a.ga, gdB = b.gf-b.ga;
-    if (gdB !== gdA) return gdB - gdA;
-    if (b.gf !== a.gf) return b.gf - a.gf;
-    return a.name.localeCompare(b.name, "sv");
-  });
-}
-
 function renderStandingsRows(standings) {
   return standings.map((team, i) => {
     const gd = team.gf - team.ga;
@@ -575,6 +699,9 @@ function renderStandingsRows(standings) {
   }).join("");
 }
 
+// ================================================
+// GRUPPSPEL INSIDE LIGA (with tipping)
+// ================================================
 function renderLeagueGroups() {
   const container = document.getElementById("ltab-groups");
   if (!container) return;
@@ -631,6 +758,7 @@ function renderLeagueGroups() {
               }).join("")}
             </div>
             <div class="standings-wrapper">
+              <div class="standings-caption">Förutspad tabell (baserat på dina tips)</div>
               <table class="standings-table">
                 <thead><tr>
                   <th>#</th><th>Lag</th><th>S</th><th>V</th><th>O</th><th>F</th>
@@ -643,7 +771,7 @@ function renderLeagueGroups() {
         </div>`;
     }).join("")}`;
 
-  // Enter-hantering
+  // Enter-key handling
   WC_MATCHES.forEach(m => {
     const h = document.getElementById(`home-${m.id}`);
     const a = document.getElementById(`away-${m.id}`);
@@ -664,66 +792,90 @@ window.submitTip = async function (matchId) {
   saveTip(matchId, hg, ag);
   const row = document.getElementById(`match-${matchId}`);
   if (row) row.classList.add("saved");
-  try { await window.syncTipsToCloud?.(); } catch(e) { console.error(e); }
+  try { await window.syncTipsToCloud?.(activeLeagueId); } catch(e) { console.error(e); }
   showToast("Tipset sparat!");
-  // Uppdatera standings för den gruppen
-  const matchObj = WC_MATCHES.find(m => m.id === matchId);
-  if (matchObj) {
-    const allGroups = groupMatchesByGroup(WC_MATCHES);
-    const tips = getSavedTips();
-    const tbody = document.querySelector(`#ltab-groups .group-body .standings-table tbody`);
-    // Re-render hela grupp-sektionen för korrekt standings
-    renderLeagueGroups();
-  }
+  // Re-render standings for the affected group
+  renderLeagueGroups();
 };
 
 // ================================================
-// SLUTSPEL INSIDE LIGA
+// SLUTSPEL INSIDE LIGA (with predictions from group tips)
 // ================================================
 function renderLeagueBracket() {
   const container = document.getElementById("ltab-bracket");
   if (!container) return;
+  const tips = getSavedTips();
   const picks = getKnockoutPicks();
   const locked = !isBeforeDeadline();
+  const { r32resolved } = buildResolvedKnockout(tips, picks);
 
-  const rounds = ["Sextondelsfinal","Åttondelsfinaler","Kvartsfinaler","Semifinaler","Final"];
-  const emojis = { "Sextondelsfinal":"⚡","Åttondelsfinaler":"⚔️","Kvartsfinaler":"🔥","Semifinaler":"🌟","Final":"🏆" };
-  const byRound = KNOCKOUT_SCHEDULE.reduce((acc,m) => { if(!acc[m.round])acc[m.round]=[]; acc[m.round].push(m); return acc; }, {});
+  const rounds = [
+    {
+      key: "R32", label: "⚡ Sextondelsfinal", hint: "Baserat på dina grupptips",
+      matches: r32resolved.map(m => ({
+        id: m.id,
+        home: m.homeResolved,
+        away: m.awayResolved,
+        homeOriginal: m.home,
+        awayOriginal: m.away
+      }))
+    },
+    {
+      key: "R16", label: "⚔️ Åttondelsfinaler", hint: "Välj vinnare",
+      matches: KNOCKOUT_STRUCTURE.R16.map(m => ({ id: m.id, home: picks[m.id-100] ? picks[m.id-100] : m.home, away: m.away }))
+    },
+    {
+      key: "QF", label: "🔥 Kvartsfinaler", hint: "Välj vinnare",
+      matches: KNOCKOUT_STRUCTURE.QF
+    },
+    {
+      key: "SF", label: "🌟 Semifinaler", hint: "Välj vinnare",
+      matches: KNOCKOUT_STRUCTURE.SF
+    },
+    {
+      key: "Final", label: "🏆 Final", hint: "Välj VM-vinnare!",
+      matches: KNOCKOUT_STRUCTURE.Final
+    }
+  ];
 
-  container.innerHTML = rounds.map(round => {
-    const matches = byRound[round] || [];
-    return `
+  container.innerHTML = `
+    <div class="bracket-info-box">
+      💡 Namnen i sextondelsfinalerna beräknas automatiskt baserat på dina grupptips. Välj vinnare i varje match.
+    </div>
+    ${rounds.map(round => `
       <div class="bracket-round">
         <div class="round-header">
-          <span class="round-title">${emojis[round]} ${round}</span>
-          <span class="round-hint">${locked?"Låst":"Klicka för att välja vinnare"}</span>
+          <span class="round-title">${round.label}</span>
+          <span class="round-hint">${locked?"🔒 Låst":round.hint}</span>
         </div>
         <div class="bracket-grid">
-          ${matches.map(m => {
+          ${round.matches.map(m => {
             const picked = picks[m.id];
+            const homeDisplay = m.home;
+            const awayDisplay = m.away;
             return `
               <div class="bracket-card">
-                <button class="bracket-btn ${picked===m.home?"picked":""}"
-                  onclick="pickWinner(${m.id},'${safeWinnerString(m.home)}')" ${locked?"disabled":""}>
-                  ${picked===m.home?"✓ ":""}${escapeHtml(m.home)}
+                <button class="bracket-btn ${picked===homeDisplay?"picked":""}"
+                  onclick="pickWinner(${m.id},'${safeWinnerString(homeDisplay)}')" ${locked?"disabled":""}>
+                  ${picked===homeDisplay?"✓ ":""}${escapeHtml(homeDisplay)}
                 </button>
                 <div class="bracket-vs">vs</div>
-                <button class="bracket-btn ${picked===m.away?"picked":""}"
-                  onclick="pickWinner(${m.id},'${safeWinnerString(m.away)}')" ${locked?"disabled":""}>
-                  ${picked===m.away?"✓ ":""}${escapeHtml(m.away)}
+                <button class="bracket-btn ${picked===awayDisplay?"picked":""}"
+                  onclick="pickWinner(${m.id},'${safeWinnerString(awayDisplay)}')" ${locked?"disabled":""}>
+                  ${picked===awayDisplay?"✓ ":""}${escapeHtml(awayDisplay)}
                 </button>
               </div>`;
           }).join("")}
         </div>
-      </div>`;
-  }).join("");
+      </div>
+    `).join("")}`;
 }
 
 window.pickWinner = async function (matchId, winner) {
   if (!isBeforeDeadline()) { showToast("Deadline passerad.", "error"); return; }
   saveKnockoutPick(matchId, winner);
   renderLeagueBracket();
-  try { await window.syncTipsToCloud?.(); } catch(e) { console.error(e); }
+  try { await window.syncTipsToCloud?.(activeLeagueId); } catch(e) { console.error(e); }
   showToast("Val sparat!");
 };
 
@@ -738,12 +890,23 @@ async function renderLeagueLeaderboard(league, leagueId) {
   try {
     if (!league) {
       const leagueDoc = await window.dbGetDoc(window.dbDoc("leagues", leagueId));
+      if (!leagueDoc.exists()) { container.innerHTML = `<p class="loading-block">Kunde inte ladda liga.</p>`; return; }
       league = leagueDoc.data();
     }
+
     const memberUids = league.members || [];
-    const allTipsSnap = await window.dbGetDocs(window.dbCollection("tips"));
-    const allTips = [];
-    allTipsSnap.forEach(d => { if (memberUids.includes(d.id)) allTips.push({ uid: d.id, ...d.data() }); });
+
+    // Fetch tips from league subcollection
+    let allTips = [];
+    try {
+      const subSnap = await window.dbGetDocs(window.dbCollectionPath("leagues", leagueId, "tips"));
+      subSnap.forEach(d => { if (memberUids.includes(d.id)) allTips.push({ uid: d.id, ...d.data() }); });
+    } catch(e) {
+      console.error("Subcollection fetch failed, falling back to global:", e);
+      // Fallback: fetch from global tips collection filtered by league members
+      const globalSnap = await window.dbGetDocs(window.dbCollection("tips"));
+      globalSnap.forEach(d => { if (memberUids.includes(d.id)) allTips.push({ uid: d.id, ...d.data() }); });
+    }
 
     const results = await window.fetchResults();
     const myUid = window._auth?.currentUser?.uid || "";
@@ -773,7 +936,7 @@ async function renderLeagueLeaderboard(league, leagueId) {
             ${ranked.length ? ranked.map((u,i) => {
               const isMe = u.uid === myUid;
               const avatar = u.photoURL
-                ? `<img src="${u.photoURL}" alt="" />`
+                ? `<img src="${escapeHtml(u.photoURL)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${escapeHtml(initialsFromName(u.displayName))}'" />`
                 : escapeHtml(initialsFromName(u.displayName));
               return `
                 <tr class="${isMe?"my-row":""}">
@@ -785,16 +948,16 @@ async function renderLeagueLeaderboard(league, leagueId) {
                   <td class="lb-tipped">${u.tipped}/${TOTAL_GROUP_MATCHES}</td>
                   <td class="lb-pts">${u.points}</td>
                 </tr>`;
-            }).join("") : `<tr><td colspan="4" class="empty-table-cell">Inga tips ännu</td></tr>`}
+            }).join("") : `<tr><td colspan="4" class="empty-table-cell">Inga tips ännu. Börja tippa!</td></tr>`}
           </tbody>
         </table>
       </div>
       <div class="info-box" style="margin-top:20px">
-        <p>💡 <strong>Poängsystem:</strong> Exakt rätt resultat = 3p · Rätt utgång = 1p · Rätt slutspelsvinnare = 2p</p>
+        <p>💡 <strong>Poängsystem:</strong> Exakt rätt resultat = 3p · Rätt utgång (V/O/F) = 1p · Rätt slutspelsvinnare = 2p</p>
       </div>`;
   } catch(e) {
     console.error(e);
-    container.innerHTML = `<p class="loading-block">Kunde inte ladda topplistan.</p>`;
+    container.innerHTML = `<p class="loading-block">Kunde inte ladda topplistan. Kontrollera Firestore-regler.</p>`;
   }
 }
 
@@ -826,6 +989,8 @@ function calcUserPoints(tips, picks, groupResults, knockoutResults) {
 async function renderProfile() {
   const user = window._auth?.currentUser;
   if (!user) return;
+  _pendingProfileAvatarFile = null; // reset pending file on re-render
+
   try {
     let firstName = "", lastName = "";
     const userDoc = await window.dbGetDoc(window.dbDoc("users", user.uid));
@@ -839,15 +1004,16 @@ async function renderProfile() {
     }
     const fn = document.getElementById("profile-firstname");
     const ln = document.getElementById("profile-lastname");
-    const email = document.getElementById("profile-email-readonly");
+    const emailField = document.getElementById("profile-email-readonly");
     const preview = document.getElementById("profile-avatar-preview");
     if (fn) fn.value = firstName;
     if (ln) ln.value = lastName;
-    if (email) email.value = user.email||"";
+    if (emailField) emailField.value = user.email||"";
     if (preview) {
       if (user.photoURL) {
-        preview.innerHTML = `<img src="${user.photoURL}" alt="avatar" />`;
+        preview.innerHTML = `<img src="${escapeHtml(user.photoURL)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
       } else {
+        preview.innerHTML = "";
         preview.textContent = initialsFromName(user.displayName||user.email);
       }
     }
@@ -863,13 +1029,14 @@ window.previewProfileAvatar = function (e) {
   if (!file) return;
   if (file.size > 5*1024*1024) {
     const msg = document.getElementById("profile-msg");
-    if (msg) msg.textContent = "Profilbilden får vara max 5 MB.";
+    if (msg) { msg.textContent = "Profilbilden får vara max 5 MB."; }
     e.target.value=""; return;
   }
+  _pendingProfileAvatarFile = file; // Store the file
   const reader = new FileReader();
   reader.onload = ev => {
     const preview = document.getElementById("profile-avatar-preview");
-    if (preview) preview.innerHTML = `<img src="${ev.target.result}" alt="avatar" />`;
+    if (preview) preview.innerHTML = `<img src="${ev.target.result}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
   };
   reader.readAsDataURL(file);
 };
@@ -890,40 +1057,65 @@ window.saveProfileChanges = async function () {
   const msg = document.getElementById("profile-msg");
   if (!user||!msg) return;
   msg.textContent=""; msg.className="auth-error profile-feedback";
+
   const firstName = document.getElementById("profile-firstname")?.value.trim()||"";
-  const lastName = document.getElementById("profile-lastname")?.value.trim()||"";
-  const file = document.getElementById("profile-avatar-input")?.files?.[0];
+  const lastName  = document.getElementById("profile-lastname")?.value.trim()||"";
+  // Use the stored pending file (set by previewProfileAvatar)
+  const file = _pendingProfileAvatarFile;
+
   if (!firstName||!lastName) { msg.textContent="Fyll i både förnamn och efternamn."; return; }
+
+  const saveBtn = document.querySelector('[onclick="saveProfileChanges()"]');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Sparar..."; }
+
   try {
-    let photoURL = user.photoURL||"";
+    let photoURL = user.photoURL || "";
+
     if (file) {
       const sRef = window.storageRef(window._storage, `avatars/${user.uid}`);
       await window.storageUploadBytes(sRef, file);
       photoURL = await window.storageGetDownloadURL(sRef);
     }
+
     const displayName = `${firstName} ${lastName}`.trim();
+
+    // 1. Update Firebase Auth profile
     await window._firebaseFns.updateProfile(user, { displayName, photoURL });
+    // 2. Force reload the auth user object
     await user.reload();
 
-    updateSidebar();
-
+    // 3. Update Firestore users collection
     await window.dbSetDoc(window.dbDoc("users", user.uid), {
       email: user.email, displayName, firstName, lastName, photoURL,
       updatedAt: new Date().toISOString()
     }, { merge: true });
+
+    // 4. Update Firestore tips collection (so leaderboard shows new photo)
     await window.dbSetDoc(window.dbDoc("tips", user.uid), {
       email: user.email, displayName, photoURL,
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
-    msg.textContent = "Profilen har uppdaterats.";
+    // 5. Update sidebar immediately with new data
+    updateSidebar();
+
+    // 6. Reset pending file
+    _pendingProfileAvatarFile = null;
+    const fileInput = document.getElementById("profile-avatar-input");
+    if (fileInput) fileInput.value = "";
+
+    msg.textContent = "Profilen har uppdaterats!";
     msg.classList.add("success");
-    renderHome();
+    showToast("Profil sparad! ✓");
+
+    // 7. Re-render profile to show updated data
     renderProfile();
-    showToast("Profil sparad!");
+
   } catch(e) {
     console.error(e);
-    msg.textContent="Kunde inte spara profilen.";
+    msg.textContent = "Kunde inte spara profilen: " + (e.message || "okänt fel");
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Spara profil"; }
   }
 };
 
@@ -942,11 +1134,15 @@ window.changeMyPassword = async function () {
     await window._firebaseFns.updatePassword(user, newPw);
     document.getElementById("current-password").value="";
     document.getElementById("new-password").value="";
-    msg.textContent="Lösenordet har bytts."; msg.classList.add("success");
+    msg.textContent="Lösenordet har bytts!"; msg.classList.add("success");
     showToast("Lösenord uppdaterat!");
   } catch(e) {
     console.error(e);
-    msg.textContent="Fel nuvarande lösenord eller kunde inte byta lösenord.";
+    if (e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") {
+      msg.textContent = "Fel nuvarande lösenord.";
+    } else {
+      msg.textContent = "Kunde inte byta lösenord.";
+    }
   }
 };
 
@@ -975,11 +1171,11 @@ window.confirmDeleteAccount = async function () {
     const credential = window._firebaseFns.EmailAuthProvider.credential(user.email, pw);
     await window._firebaseFns.reauthenticateWithCredential(user, credential);
 
-    // Ta bort Firestore-data
+    // Delete Firestore data
     try { await window.dbDeleteDoc(window.dbDoc("tips", user.uid)); } catch(_) {}
     try { await window.dbDeleteDoc(window.dbDoc("users", user.uid)); } catch(_) {}
 
-    // Ta bort auth-kontot
+    // Delete auth account
     await window._firebaseFns.deleteUser(user);
 
     localStorage.removeItem("vm2026_tips");
@@ -987,12 +1183,16 @@ window.confirmDeleteAccount = async function () {
     showToast("Kontot har raderats.");
   } catch(e) {
     console.error(e);
-    errEl.textContent = "Fel lösenord eller något gick fel.";
+    if (e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") {
+      errEl.textContent = "Fel lösenord.";
+    } else {
+      errEl.textContent = "Något gick fel. Försök igen.";
+    }
   }
 };
 
 // ================================================
-// AUTH-MODALER
+// AUTH MODALS
 // ================================================
 window.showLogin = function () {
   document.getElementById("panel-register").style.display = "none";
@@ -1031,8 +1231,8 @@ window.requestPasswordReset = async function () {
 // INIT
 // ================================================
 window.initApp = function () {
-  renderHome();
-  renderSchedule();
+  // Switch to home tab
+  switchTab("home", document.querySelector('[data-tab="home"]'));
 };
 
 document.addEventListener("DOMContentLoaded", () => {});
